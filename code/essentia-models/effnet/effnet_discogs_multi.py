@@ -3,6 +3,7 @@ import glob
 import pickle
 import argparse
 import datetime
+import numpy as np
 from essentia.standard import MonoLoader, TensorflowPredictEffnetDiscogs
 
 
@@ -15,6 +16,7 @@ def compute_effnet_embeddings_for_folder(
     Each entry in the pickle contains `id`, `artist`, `song`, and `embedding`.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    #specify the path to the model (not on git anymore)
     model_path = "/Users/javierechavarri/Desktop/MTG-102/code/essentia_models/discogs_multi_embeddings-effnet-bs64-1.pb"
     if output_folder is None:
         output_folder = base_dir
@@ -53,6 +55,7 @@ def compute_effnet_embeddings_for_folder(
         # Load audio and compute embedding
         audio = MonoLoader(filename=file_path, sampleRate=16000, resampleQuality=4)()
         embedding = model(audio)
+        embedding = np.mean(embedding, axis=0)  # Average over time frames
         # Convert embedding to a list of floats
         try:
             embedding_list = embedding.tolist()
