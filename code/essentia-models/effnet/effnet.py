@@ -3,27 +3,34 @@ import glob
 import pickle
 import argparse
 import datetime
+import numpy as np
 from essentia.standard import MonoLoader, TensorflowPredictEffnetDiscogs
 
 
 def compute_effnet_embeddings_for_folder(
-    folder: str, output_folder: str = None
-) -> None:
+    folder: str, model: str, output_folder: str = None) -> None:
     """
     Compute embeddings for every .mp3 in `folder` (including subdirectories) and write to pickle.
     Output filename is based on the folder name, current date (YYYY-MM-DD), and `effnet`, with format `<foldername>-<date>-effnet.pkl`.
     Each entry in the pickle contains `id`, `artist`, `song`, and `embedding`.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = "/Users/javierechavarri/Desktop/MTG-102/code/essentia_models/discogs_multi_embeddings-effnet-bs64-1.pb"
+    model_path = model
     if output_folder is None:
         output_folder = base_dir
     os.makedirs(output_folder, exist_ok=True)
 
-    # Generate output filename based on folder name and current date
+    # Generate output filename based on folder name, current date, and model string
     date_str = datetime.date.today().isoformat()
     folder_basename = os.path.basename(os.path.normpath(folder))
-    output_filename = f"{folder_basename}-{date_str}-effnet.pkl"
+    model_lower = model_path.lower()
+    if 'artist' in model_lower:
+        suffix = '-artist'
+    elif 'multi' in model_lower:
+        suffix = '-multi'
+    else:
+        suffix = ''
+    output_filename = f"{folder_basename}-{date_str}-effnet{suffix}.pkl"
     output_path = os.path.join(output_folder, output_filename)
 
     # Initialize the embedding model
@@ -53,6 +60,7 @@ def compute_effnet_embeddings_for_folder(
         # Load audio and compute embedding
         audio = MonoLoader(filename=file_path, sampleRate=16000, resampleQuality=4)()
         embedding = model(audio)
+        embedding = np.mean(embedding, axis=0)  # Average over time
         # Convert embedding to a list of floats
         try:
             embedding_list = embedding.tolist()
@@ -80,8 +88,9 @@ if __name__ == "__main__":
         description="Compute EffNet embeddings for all mp3s in a folder"
     )
     parser.add_argument("folder", help="Path to folder containing .mp3 files")
+    parser.add_argument("model", help="Path to the TensorFlow Effnet model file")
     parser.add_argument(
         "-o", "--output_folder", help="Directory to save pickle output", default=None
     )
     args = parser.parse_args()
-    compute_effnet_embeddings_for_folder(args.folder, args.output_folder)
+    compute_effnet_embeddings_for_folder(args.folder, args.model, args.output_folder)
