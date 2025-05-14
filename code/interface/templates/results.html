@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomendaciones - Em Sona</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.9) 100%), url('/static/images/bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        
+        .song-card {
+            transition: all 0.3s ease;
+        }
+        
+        .song-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .wave-small {
+            display: flex;
+            align-items: center;
+            height: 20px;
+        }
+        
+        .wave-bar-small {
+            width: 2px;
+            height: 100%;
+            background-color: #fff;
+            margin: 0 1px;
+            border-radius: 1px;
+            opacity: 0.7;
+            animation: wave-small 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes wave-small {
+            0%, 100% {
+                height: 5px;
+            }
+            50% {
+                height: 15px;
+            }
+        }
+        
+        .wave-bar-small:nth-child(1) { animation-delay: 0.1s; }
+        .wave-bar-small:nth-child(2) { animation-delay: 0.2s; }
+        .wave-bar-small:nth-child(3) { animation-delay: 0.3s; }
+        .wave-bar-small:nth-child(4) { animation-delay: 0.2s; }
+        .wave-bar-small:nth-child(5) { animation-delay: 0.1s; }
+        
+        #tsne-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .tsne-point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.6);
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tsne-point.selected {
+            width: 16px;
+            height: 16px;
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            z-index: 10;
+        }
+        
+        .tsne-point:hover {
+            transform: translate(-50%, -50%) scale(1.5);
+        }
+        
+        .tsne-label {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            transform: translate(-50%, -100%);
+            margin-top: -8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        .tsne-point:hover + .tsne-label {
+            opacity: 1;
+        }
+        
+        .tsne-connection {
+            position: absolute;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-10 px-4">
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-purple-200">Tus recomendaciones de música catalana</p>
+        </header>
+        
+        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 mb-8 border border-white border-opacity-20">
+            <h2 class="text-xl font-semibold text-white mb-6 tracking-tight">Mapa de similitud musical</h2>
+            <div id="tsne-container" class="mb-4"></div>
+            <p class="text-xs text-purple-200 text-center mt-2">Las canciones más cercanas entre sí tienen características musicales similares</p>
+        </div>
+        
+        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 border border-white border-opacity-20">
+            <h2 class="text-xl font-semibold text-white mb-6 tracking-tight">Top 5 canciones similares</h2>
+            <ul class="divide-y divide-white divide-opacity-10">
+                {% for cancion in canciones %}
+                <li class="py-5 flex items-center song-card" data-index="{{ loop.index0 }}">
+                    <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
+                        {{ loop.index }}
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-medium text-white">{{ cancion.titulo }}</h3>
+                        <p class="text-purple-200">{{ cancion.artista }}</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="wave-small">
+                            <div class="wave-bar-small"></div>
+                            <div class="wave-bar-small"></div>
+                            <div class="wave-bar-small"></div>
+                            <div class="wave-bar-small"></div>
+                            <div class="wave-bar-small"></div>
+                        </div>
+                        <span class="inline-block bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                            {{ cancion.similitud }}
+                        </span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            
+            <div class="mt-10 text-center">
+                <a href="/" class="inline-block bg-white text-indigo-700 font-medium py-3 px-8 rounded-md transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
+                    BUSCAR OTRA CANCIÓN
+                </a>
+            </div>
+        </div>
+        
+        <footer class="mt-12 text-center text-xs text-purple-200">
+            <p>Diseñado para amantes de la música catalana</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Datos para la visualización t-SNE
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulamos coordenadas t-SNE para las canciones
+            const canciones = [
+                {% for cancion in canciones %}
+                {
+                    titulo: "{{ cancion.titulo }}",
+                    artista: "{{ cancion.artista }}",
+                    similitud: "{{ cancion.similitud }}",
+                    x: Math.random() * 80 + 10, // Posición X aleatoria entre 10% y 90%
+                    y: Math.random() * 80 + 10  // Posición Y aleatoria entre 10% y 90%
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ];
+            
+            // Añadimos un punto para la canción de consulta en el centro
+            const cancionConsulta = {
+                titulo: "Tu canción",
+                artista: "Canción de referencia",
+                similitud: "100%",
+                x: 50,
+                y: 50
+            };
+            
+            const container = document.getElementById('tsne-container');
+            
+            // Crear punto para la canción de consulta
+            createPoint(cancionConsulta, container, true);
+            
+            // Crear puntos para las canciones similares
+            canciones.forEach((cancion, index) => {
+                const point = createPoint(cancion, container, false);
+                point.dataset.index = index;
+                
+                // Crear conexión entre la canción de consulta y cada canción similar
+                createConnection(cancionConsulta, cancion, container);
+            });
+            
+            // Resaltar canción al hacer hover en la lista
+            document.querySelectorAll('.song-card').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    const index = this.dataset.index;
+                    const point = document.querySelector(`.tsne-point[data-index="${index}"]`);
+                    if (point) point.classList.add('selected');
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    const index = this.dataset.index;
+                    const point = document.querySelector(`.tsne-point[data-index="${index}"]`);
+                    if (point) point.classList.remove('selected');
+                });
+            });
+        });
+        
+        function createPoint(cancion, container, isReference) {
+            // Crear el punto
+            const point = document.createElement('div');
+            point.className = 'tsne-point';
+            if (isReference) {
+                point.classList.add('selected');
+                point.style.backgroundColor = '#ffffff';
+                point.style.width = '18px';
+                point.style.height = '18px';
+                point.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.8)';
+                point.style.zIndex = '20';
+            } else {
+                // Color basado en la similitud (de blanco a morado)
+                const similitud = parseInt(cancion.similitud.replace('%', ''));
+                const opacity = similitud / 100;
+                point.style.backgroundColor = `rgba(255, 255, 255, ${opacity})`;
+            }
+            
+            point.style.left = `${cancion.x}%`;
+            point.style.top = `${cancion.y}%`;
+            container.appendChild(point);
+            
+            // Crear la etiqueta
+            const label = document.createElement('div');
+            label.className = 'tsne-label';
+            label.textContent = `${cancion.titulo} - ${cancion.artista}`;
+            label.style.left = `${cancion.x}%`;
+            label.style.top = `${cancion.y}%`;
+            container.appendChild(label);
+            
+            return point;
+        }
+        
+        function createConnection(source, target, container) {
+            const dx = target.x - source.x;
+            const dy = target.y - source.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            const connection = document.createElement('div');
+            connection.className = 'tsne-connection';
+            connection.style.width = `${distance}%`;
+            connection.style.left = `${source.x}%`;
+            connection.style.top = `${source.y}%`;
+            connection.style.transform = `rotate(${angle}deg)`;
+            
+            // Opacidad basada en la similitud
+            const similitud = parseInt(target.similitud.replace('%', ''));
+            const opacity = similitud / 200; // Más transparente
+            connection.style.backgroundColor = `rgba(255, 255, 255, ${opacity})`;
+            
+            container.appendChild(connection);
+        }
+    </script>
+</body>
+</html> 
