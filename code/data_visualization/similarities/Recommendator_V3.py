@@ -98,59 +98,55 @@ def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output
 
         print(f"Saved MP3 to: {mp3_path}")
         print(f"Metadata updated: {metadata_file}")
-        return filename
+        return clean_title, channel, mp3_path
 
 def compute_effnet_embeddings_for_folder(
     folder: str,
-    model_path: str,
-    output_folder: str = None
+    model: str,
+    output_folder: str = None,
+    song_name: str = None,
+    channel_name: str = None
 ) -> None:
     """
-    Compute embeddings for every .mp3 in `folder` (including subdirectories)
-    using the TensorFlow graph at `model_path`. Results are pickled to
-    `<foldername>-<YYYY-MM-DD>-effnet.pkl` in `output_folder` (or script dir).
+    Compute embeddings for every .mp3 in folder (including subdirectories) and write to pickle.
+    Output filename is based on the folder name, current date (YYYY-MM-DD), and effnet, with format <foldername>-<date>-effnet.pkl.
+    Each entry in the pickle contains id, artist, song, and embedding.
     """
-    # Verify model exists
-    if not os.path.isfile(model_path):
-        raise FileNotFoundError(f"Effnet model not found at: {model_path}")
+    import ast
 
-    # Prepare output folder
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = model
     if output_folder is None:
         output_folder = base_dir
     os.makedirs(output_folder, exist_ok=True)
 
-    # Build output filename
-    date_str = datetime.date.today().isoformat()
-    folder_basename = os.path.basename(os.path.normpath(folder))
+    # Output filename
     output_filename = "embedding_song.pkl"
     output_path = os.path.join(output_folder, output_filename)
 
-    # Initialize the Essentia TF model
+    # Load model
     model = TensorflowPredictEffnetDiscogs(
-        graphFilename=model_path,
-        output="PartitionedCall:1"
+        graphFilename=model_path, output="PartitionedCall:1"
     )
 
     entries = []
-    for file_path in sorted(glob.glob(os.path.join(folder, "**", "*.mp3"), recursive=True)):
-        # Parse ID, song, artist from filename
-        name_no_ext = os.path.splitext(os.path.basename(file_path))[0]
-        parts = name_no_ext.rsplit("-", 2)
-        if len(parts) == 3:
-            id_str, song_str, artist_str = parts
-        elif len(parts) == 2:
-            id_str, song_str = parts
-            artist_str = "unknown"
-        else:
-            id_str = parts[0]
-            song_str = ""
-            artist_str = "unknown"
+    for file_path in sorted(glob.glob(os.path.join(folder, "*.mp3"), recursive=True)):
+        filename = os.path.basename(file_path)
+        name_no_ext = os.path.splitext(filename)[0]
 
-        # Load audio and compute embedding
+        # Extract id and assign consistent song/channel
+        id_str = name_no_ext.split("_")[0]
+        song_str = song_name.replace(' ', '_').replace('"', '').strip() if song_name else name_no_ext.replace(' ', '_').replace('"', '').strip()
+        artist_str = channel_name.replace(' ', '_').replace('"', '').strip() if channel_name else "unknown"
+
         audio = MonoLoader(filename=file_path, sampleRate=16000, resampleQuality=4)()
         embedding = model(audio)
-        embedding_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+        embedding = np.mean(embedding, axis=0)
+
+        try:
+            embedding_list = embedding.tolist()
+        except AttributeError:
+            embedding_list = list(embedding)
 
         entries.append({
             "id": id_str,
@@ -159,20 +155,18 @@ def compute_effnet_embeddings_for_folder(
             "embedding": embedding_list,
         })
 
-    # Save to pickle
     with open(output_path, "wb") as f:
         pickle.dump(entries, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     print(f"Processed {len(entries)} files, saved embeddings to {output_path}")
 
-
+# --- Updated fuzzy_merge to match new metadata format ---
 def fuzzy_merge(df1, df2, key1, key2, threshold=90, limit=1):
     """
     df1[key1] will be matched to df2[key2] using fuzzy matching.
     Returns a DataFrame with matched rows from df2 and similarity score.
     """
     s = df2[key2].tolist()
-
     matches = df1[key1].apply(lambda x: process.extractOne(x, s, scorer=fuzz.token_sort_ratio))
     df1["best_match"] = [m[0] if m else None for m in matches]
     df1["score"] = [m[1] if m else None for m in matches]
@@ -181,23 +175,6 @@ def fuzzy_merge(df1, df2, key1, key2, threshold=90, limit=1):
     df_merged = pd.merge(df_matched, df2, left_on="best_match", right_on=key2, how="left")
     return df_merged
 
-# --- Loaders for EffNet (JSON) and Maest (PKL) ---
-def load_effnet_embeddings(path, population_label):
-    with open(path, 'r') as f:
-        data = json.load(f)
-    rows = []
-    for entry in data:
-        artist = entry["artist"]
-        song = entry["song"]
-        embedding_matrix = np.array(entry["embedding"])
-        agg_embedding = np.mean(embedding_matrix, axis=0)
-        rows.append({
-            "Song": song,
-            "Artist": artist,
-            "Population": population_label,
-            "Embedding": agg_embedding
-        })
-    return rows
 
 
 
@@ -277,27 +254,31 @@ def plot_recommendations(df, query_id, recommendations, k):
     fig.show()
 
 
-def load_maest_embeddings(path, population_label):
-    with open(path, "rb") as f:
+def load_embeddings(path, population_label):
+    with open(path, 'rb') as f:
         data = pickle.load(f)
-
     rows = []
     for entry in data:
-        embedding_data = entry["embedding"]
+        # Obtener ID del embedding
+        entry_id = entry["id"]
         artist = entry["artist"]
         song = entry["song"]
-
-        flattened = []
-        for i in range(min(len(embedding_data), 100)):
-            if embedding_data[i]:
-                flattened.extend(embedding_data[i])
-
-        flattened = np.array(flattened[:1000])
+        embedding_matrix = np.array(entry["embedding"])
+        
+        # Verificar si el embedding es ya un vector o una matriz
+        if len(embedding_matrix.shape) > 1:
+            # Si es una matriz, calcular la media a lo largo del eje 0
+            agg_embedding = np.mean(embedding_matrix, axis=0)
+        else:
+            # Si ya es un vector, usarlo directamente
+            agg_embedding = embedding_matrix
+            
         rows.append({
+            "ID": entry_id,  # Usar ID del embedding
             "Song": song,
             "Artist": artist,
             "Population": population_label,
-            "Embedding": flattened
+            "Embedding": agg_embedding
         })
     return rows
 
@@ -305,16 +286,13 @@ def load_maest_embeddings(path, population_label):
 # --- Choose model and load data ---
 def build_dataframe(model="effnet"):
     if model == "effnet":
-        print("1")
-        before = load_maest_embeddings("/home/guillem/Music/MTG-102/code/essentia-models/maest/embeddings/before_2012-2025-05-08_maest.pkl", "Before 2012")
-        print("2")
-        after = load_maest_embeddings("/home/guillem/Music/MTG-102/code/essentia-models/maest/embeddings/after_2018-2025-05-08_maest.pkl", "After 2018")
-        print("3")
-        extra_song = load_maest_embeddings("/home/guillem/Pictures/Embedding/embedding_song.pkl", "Selected Song")
+        before = load_embeddings("/home/guillem/Music/emsona/code/essentia-models/effnet/embeddings/before_2012-2025-05-13-effnet-artist.pkl", "Before 2012")
+        after = load_embeddings("/home/guillem/Music/emsona/code/essentia-models/effnet/embeddings/after_2018-2025-05-13-effnet-artist.pkl", "After 20180000")
+        extra_song = load_embeddings("/home/guillem/Pictures/Embedding/embedding_song.pkl", "Selected Song")
     else:
         raise ValueError("Model must be 'effnet'")
     
-    all_songs = before + after + extra_song
+    all_songs = extra_song + before + after 
     flat_data = []
     for song in all_songs:
         row = {
@@ -327,14 +305,19 @@ def build_dataframe(model="effnet"):
         flat_data.append(row)
     return pd.DataFrame(flat_data)
 
+# --- Updated query_id_creator to keep consistency with metadata ---
 def query_id_creator(artist, song):
+    artist = artist.replace(' ', '_').strip()
+    song = song.replace(' ', '_').strip()
     return f"{artist}::{song}"
 
+
+# --- Updated normalize_text to handle metadata format ---
 def normalize_text(text):
     text = text.replace("_", " ")
     text = unicodedata.normalize("NFKD", text)
-    text = "".join(c for c in text if not unicodedata.combining(c))  # Remove accents
-    text = re.sub(r"[^\w\s]", "", text)  # Remove punctuation
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    text = re.sub(r"[^\w\s]", "", text)
     return text.strip().lower()
 
 
@@ -373,109 +356,74 @@ def clear_folders(folder1: str, folder2: str, folder3: str) -> None:
 
 
 if __name__ == "__main__":
+    # --- PARAMETERS TO EDIT ---
+    song_path = "/home/guillem/Pictures/Song"
+    song_url = "https://youtu.be/rQVc4fsWd-0"
+    embedding_path = "/home/guillem/Pictures/Embedding"
+    model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
+    metadata_path = "/home/guillem/Pictures/Metadata_Final/metadata_final.csv"  # Updated path to uploaded file
+    store_metadata_path = "/home/guillem/Pictures/Metadata"
 
-
-
-    # INFORMATION TO BE EDITED
-    #--------------------------------------------------------------------------------------------------------------------------------
-
-
-    song_path = "/home/guillem/Pictures/Song"  #The folder where the song is gonna be downloaded
-    song_url = "https://youtu.be/1wUTtl5gJMw"  #The url of the song we want to download
-    embedding_path = "/home/guillem/Pictures/Embedding"  #The path of the embeddings we are using
-    model_path = "/home/guillem/Music/MTG-102/code/essentia-models/effnet/discogs_multi_embeddings-effnet-bs64-1.pb"  #The path of the model we are using
-    metadata_path = "/home/guillem/Music/MTG-102/youtube_playlist_scraper/catalan_music_metadata.csv"  #The path of the metadata of the songs we are using
-    store_metadata_path = "/home/guillem/Pictures/Metadata"  # Where we want to store the metadata of the song we have just downloaded 
-    
-    metric = "euclidean"  #Netric we want to use (euclidean or cosine)
-    k = 10  #Number of clusters we want to use
-    n = 4  #Number of recommentations we want to get
-
-    model = "effnet"  #DO NOT CHANGE!
-
-    #--------------------------------------------------------------------------------------------------------------------------------
-
+    metric = "euclidean"
+    k = 1
+    n = 10
+    model = "effnet"
 
     store_metadata_path_file = store_metadata_path + "/metadata.csv"
-    # 1. Download and embed the song
-    filename = download_youtube_audio_mp3(song_url, song_path, store_metadata_path)
+
+    # Step 1: Download and embed the song
+    song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path)
+    compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path, song_name, channel_name)
 
 
-    compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path )
-    for i in range(10):
-        print(filename)
-    # 2. Load metadata
+
+    # Step 2: Load metadata
     metadata1 = pd.read_csv(metadata_path)
-
     metadata2 = pd.read_csv(store_metadata_path_file)
-
     metadata_df = pd.concat([metadata1, metadata2], ignore_index=True)
     metadata_df.columns = metadata_df.columns.str.strip()
 
-    # 3. Load existing embeddings
 
+    # Step 3: Load embeddings
     df = build_dataframe(model=model)
 
-    # 4. Extract the downloaded song's name and use it as query
-    downloaded_song_filename = os.path.splitext(os.path.basename(mp3_path))[0]
-    parts = downloaded_song_filename.rsplit("-", 2)
-    if len(parts) == 3:
-        id_str, song_str, artist_str = parts
-    elif len(parts) == 2:
-        id_str, song_str = parts
-        artist_str = "unknown"
-    else:
-        id_str = parts[0]
-        song_str = ""
-        artist_str = "unknown"
+    # Step 4: Normalize for fuzzy matching
+    df["query_key"] = (df["Artist"] + " " + df["Song"]).apply(normalize_text)
+    metadata_df["meta_key"] = (metadata_df["channel_name"] + " " + metadata_df["song_title"]).apply(normalize_text)
 
-    # 5. Manually create a row and append it to df
-    with open("/home/guillem/Pictures/Embedding/embedding_song.pkl", "rb") as f:
-        song_data = pickle.load(f)
-    song_embedding = song_data[0]["embedding"]
-    flattened = []
-    for i in range(min(len(song_embedding), 100)):
-        if song_embedding[i]:
-            flattened.extend(song_embedding[i])
-    flattened = np.array(flattened[:1000])
+    # Step 5: Prepare YT links from video_id
+    meta_cols = metadata_df[["meta_key", "video_id"]].copy()
+    meta_cols["YT Link"] = "https://www.youtube.com/watch?v=" + meta_cols["video_id"]
 
-    new_row = {
-        "Song": song_str,
-        "Artist": artist_str,
-        "Population": "Selected Song"
-    }
-    for i, val in enumerate(flattened):
-        new_row[f"e{i}"] = val
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-
-    # 6. Normalize for fuzzy merge
-    df["query_key"] = (df["Artist"].str.replace("_", " ") + " " + df["Song"].str.replace("_", " ")).apply(normalize_text)
-    metadata_df["meta_key"] = (metadata_df["Band"] + " " + metadata_df["Song Name"]).apply(normalize_text)
-
-    # 7. Merge YT Links
-    matched = fuzzy_merge(df, metadata_df[["meta_key", "YT Link"]], "query_key", "meta_key", threshold=85)
+    # Step 6: Fuzzy merge metadata
+    matched = fuzzy_merge(df, meta_cols, "query_key", "meta_key", threshold=85)
     df = matched
 
-    # 8. Construct query ID
-    query_id = query_id_creator(artist_str, song_str)
+    # Step 7: Generate query ID and cluster
+    song_name = song_name.replace('_', ' ').strip()
+    channel_name = channel_name.strip()
 
-    # 9. Clustering
+
+    query_id = query_id_creator(channel_name, song_name)
     embedding_cols = [col for col in df.columns if col.startswith("e")]
     X = df[embedding_cols].values
     kmeans = KMeans(n_clusters=k, random_state=42)
     df[f"Cluster_{k}"] = kmeans.fit_predict(X)
 
-    # 10. Recommendations
-    top_recs = recommend_similar_songs(df, query_id, n=n, k=k, metric=metric, query_embedding=flattened)    
-    print(top_recs)
 
-    # 11. t-SNE
+
+
+    # Step 8: Recommend similar songs
+    top_recs = recommend_similar_songs(df, query_id, n=n, k=k, metric=metric)
+    print(top_recs)
+    df.to_csv("/home/guillem/Downloads/final_song_database.csv", index=False)
+    # Step 9: t-SNE and plot
     tsne = TSNE(n_components=2, perplexity=30, random_state=42)
     X_2d = tsne.fit_transform(X)
     df["x"] = X_2d[:, 0]
     df["y"] = X_2d[:, 1]
     df["Label"] = df["Artist"] + " - " + df["Song"]
-
-    # 12. Plot
     plot_recommendations(df, query_id, top_recs, k=k)
-    clear_folders(song_path, embedding_path, store_metadata_path)
+
+    # Step 10: Clear intermediate files
+    #clear_folders(song_path, embedding_path, store_metadata_path)
