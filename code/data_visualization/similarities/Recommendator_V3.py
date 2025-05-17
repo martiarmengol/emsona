@@ -358,7 +358,7 @@ def clear_folders(folder1: str, folder2: str, folder3: str) -> None:
 if __name__ == "__main__":
     # --- PARAMETERS TO EDIT ---
     song_path = "/home/guillem/Pictures/Song"
-    song_url = "https://youtu.be/rQVc4fsWd-0"
+    song_url = "https://youtu.be/f1BQsyitRDE"
     embedding_path = "/home/guillem/Pictures/Embedding"
     model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
     metadata_path = "/home/guillem/Pictures/Metadata_Final/metadata_final.csv"  # Updated path to uploaded file
