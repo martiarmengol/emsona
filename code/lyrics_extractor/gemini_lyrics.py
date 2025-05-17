@@ -12,23 +12,6 @@ export GENAI_API_KEY="your_actual_api_key"
 """
 
 
-def parse_filename(filename):
-    """
-    Parse a filename in the format <id>-<song>-<artist>.mp3
-    where <id> may contain hyphens but <song> and <artist> do not.
-    """
-    name_wo_ext = os.path.splitext(filename)[0]
-    parts = name_wo_ext.split("-")
-    if len(parts) < 3:
-        raise ValueError(
-            f"Filename '{filename}' does not match the expected pattern <id>-<song>-<artist>.mp3"
-        )
-    artist = parts[-1]
-    song = parts[-2]
-    id_ = "-".join(parts[:-2])
-    return id_, song, artist
-
-
 def get_lyrics(client, file_path):
     """
     Upload the audio file and request lyrics transcription from Gemini.
@@ -89,15 +72,9 @@ def main():
 
     for idx, fname in enumerate(files, start=1):
         file_path = os.path.join(args.input_folder, fname)
-        try:
-            id_, song, artist = parse_filename(fname)
-        except ValueError:
-            print(f"Skipping file with unexpected name format: {fname}")
-            continue
+        id_ = os.path.splitext(fname)[0]
 
-        print(
-            f"[{idx}/{total}] Processing id='{id_}', song='{song}', artist='{artist}'"
-        )
+        print(f"[{idx}/{total}] Processing id='{id_}'")
         lyrics = None
         for attempt in range(1, max_retries + 1):
             try:
@@ -113,7 +90,7 @@ def main():
             )
             continue
 
-        results.append({"id": id_, "song": song, "artist": artist, "lyrics": lyrics})
+        results.append({"id": id_, "lyrics": lyrics})
         print(f"  Retrieved lyrics ({len(lyrics)} characters)")
 
         if idx < total:

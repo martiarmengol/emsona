@@ -6,54 +6,86 @@ from urllib.parse import urlparse, parse_qs
 import re
 
 # CONFIGURATION
-AUDIO_OUTPUT_DIR = 'downloads'
-METADATA_OUTPUT_FILE = 'catalan_music_metadata.csv'
-INPUT_CSV = 'playlists.csv'
+import argparse
 
+parser = argparse.ArgumentParser(description="YouTube playlist scraper")
+parser.add_argument(
+    "--playlist-csv",
+    type=str,
+    default="playlists.csv",
+    help="Path to the playlists CSV file",
+)
+parser.add_argument(
+    "--songs-dir",
+    type=str,
+    default="downloads",
+    help="Directory to save downloaded audio files",
+)
+parser.add_argument(
+    "--output-dir", type=str, default=".", help="Directory to save metadata CSV file"
+)
+args = parser.parse_args()
 
+INPUT_CSV = args.playlist_csv
+AUDIO_OUTPUT_DIR = args.songs_dir
+OUTPUT_DIR = args.output_dir
+METADATA_FILENAME = "catalan_music_metadata.csv"
+METADATA_OUTPUT_FILE = os.path.join(OUTPUT_DIR, METADATA_FILENAME)
 
 
 # Ensure output folder exists
 os.makedirs(AUDIO_OUTPUT_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Load list of playlists
 df_playlists = pd.read_csv(INPUT_CSV)
-playlist_urls = df_playlists['playlist_url'].dropna().tolist()
+playlist_urls = df_playlists["playlist_url"].dropna().tolist()
 
 # Track downloaded video IDs
 downloaded_ids = set()
 if os.path.exists(METADATA_OUTPUT_FILE):
     existing_df = pd.read_csv(METADATA_OUTPUT_FILE)
-    downloaded_ids.update(existing_df['video_id'].tolist())
+    downloaded_ids.update(existing_df["video_id"].tolist())
 else:
     existing_df = pd.DataFrame()
+
+# Backfill youtube_link for existing records
+if not existing_df.empty and "youtube_link" not in existing_df.columns:
+    existing_df["youtube_link"] = existing_df["video_id"].apply(
+        lambda x: f"https://www.youtube.com/watch?v={x}"
+    )
 
 # Collect metadata
 metadata_records = []
 
 # YT-DLP options for metadata fetching
 ydl_opts_info = {
-    'quiet': True,
-    'ignoreerrors': True,
-    'extract_flat': True,
-    'skip_download': True
+    "quiet": True,
+    "ignoreerrors": True,
+    "extract_flat": True,
+    "skip_download": True,
 }
+
 
 # YT-DLP options for audio download
 def get_ydl_audio_opts(output_filename):
     return {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(AUDIO_OUTPUT_DIR, f'{output_filename}.%(ext)s'),
-        'quiet': True,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'ignoreerrors': True,
+        "format": "bestaudio/best",
+        "outtmpl": os.path.join(AUDIO_OUTPUT_DIR, f"{output_filename}.%(ext)s"),
+        "quiet": True,
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ],
+        "ignoreerrors": True,
     }
 
+
 # Helper: clean and standardize title
+
 
 def clean_title(title, channel):
     if not title:
@@ -62,40 +94,42 @@ def clean_title(title, channel):
         channel = ""
 
     # Remove channel name from title
-    title = title.replace(channel, '').strip()
+    title = title.replace(channel, "").strip()
 
     # Remove illegal/special characters
     import re
-    title = re.sub(r'[\\/:"*?<>|]+', '', title)   # Windows-illegal characters
-    title = re.sub(r'[’"“”‘]', '', title)         # Fancy quotes
-    title = title.replace(' - ', ' ').replace('—', ' ')
+
+    title = re.sub(r'[\\/:"*?<>|]+', "", title)  # Windows-illegal characters
+    title = re.sub(r'[’"“”‘]', "", title)  # Fancy quotes
+    title = title.replace(" - ", " ").replace("—", " ")
     title = title.strip()
 
     # Replace spaces with underscores
-    return '_'.join(title.split())[:100]  # Limit length
+    return "_".join(title.split())[:100]  # Limit length
+
 
 # Iterate over playlists
 for playlist_url in playlist_urls:
     try:
         with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
             info = ydl.extract_info(playlist_url, download=False)
-            if not info or 'entries' not in info:
+            if not info or "entries" not in info:
                 print(f"Failed to fetch playlist: {playlist_url}")
                 continue
 
-            for entry in info['entries']:
+            for entry in info["entries"]:
                 if entry is None:
                     continue
-                video_id = entry.get('id')
-                title = entry.get('title')
-                channel = entry.get('uploader')
+                video_id = entry.get("id")
+                title = entry.get("title")
+                channel = entry.get("uploader")
 
                 if not video_id or video_id in downloaded_ids:
                     continue
 
                 # Clean metadata
                 clean_song_title = clean_title(title, channel)
-                filename = f"{video_id}_{clean_song_title}"
+                filename = video_id
 
                 # Download audio
                 try:
@@ -106,13 +140,16 @@ for playlist_url in playlist_urls:
                     continue
 
                 # Add metadata record
-                metadata_records.append({
-                    'video_id': video_id,
-                    'song_title': clean_song_title,
-                    'channel_name': channel,
-                    'original_title': title,
-                    'audio_file': f"{filename}.mp3"
-                })
+                metadata_records.append(
+                    {
+                        "video_id": video_id,
+                        "song_title": clean_song_title,
+                        "channel_name": channel,
+                        "original_title": title,
+                        "audio_file": f"{filename}.mp3",
+                        "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
+                    }
+                )
 
                 downloaded_ids.add(video_id)
     except Exception as e:
