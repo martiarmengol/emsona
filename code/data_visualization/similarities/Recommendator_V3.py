@@ -206,29 +206,32 @@ def recommend_similar_songs(df, query_id, n=5, k=12, metric='cosine', query_embe
 
     query_row = df[(df["Artist"] == artist) & (df["Song"] == song)]
     embedding_cols = [col for col in df.columns if col.startswith("e")]
+    df[embedding_cols] = df[embedding_cols].astype(float)  # Ensure correct dtype
 
     if not query_row.empty:
-        # Query song found in DataFrame
-        query_embedding_vec = query_row[embedding_cols].values[0]
+        query_embedding_vec = query_row[embedding_cols].values[0].astype(float)
         query_cluster = query_row[f"Cluster_{k}"].values[0]
         cluster_df = df[df[f"Cluster_{k}"] == query_cluster].copy()
         cluster_df = cluster_df[~((cluster_df["Artist"] == artist) & (cluster_df["Song"] == song))]
     else:
-        # Query song not found, use provided embedding
         if query_embedding is None:
             raise ValueError(f"Song '{query_id}' not found in DataFrame and no embedding provided.")
-
-        query_embedding_vec = query_embedding
+        query_embedding_vec = np.array(query_embedding, dtype=float)
         kmeans = KMeans(n_clusters=k, random_state=42).fit(df[embedding_cols])
         query_cluster = kmeans.predict([query_embedding_vec])[0]
         cluster_df = df[df[f"Cluster_{k}"] == query_cluster].copy()
 
+    # Compute similarity/distance properly
     def similarity(row):
-        candidate_embedding = row[embedding_cols].values
+        candidate_embedding = np.array([row[col] for col in embedding_cols], dtype=float)
         return 1 - cosine(query_embedding_vec, candidate_embedding) if metric == 'cosine' else euclidean(query_embedding_vec, candidate_embedding)
 
     cluster_df["Similarity"] = cluster_df.apply(similarity, axis=1)
-    sorted_df = cluster_df.sort_values(by="Similarity", ascending=(metric == 'euclidean'))
+
+    # Sort direction depends on metric
+    ascending = (metric == 'euclidean')
+    sorted_df = cluster_df.sort_values(by="Similarity", ascending=ascending)
+
     return sorted_df[["Artist", "Song", "Similarity", "YT Link"]].head(n)
 
 # --- Plotting function ---
@@ -355,34 +358,17 @@ def clear_folders(folder1: str, folder2: str, folder3: str) -> None:
         print(f"✅ Cleared: {folder}")
 
 
-if __name__ == "__main__":
-    # --- PARAMETERS TO EDIT ---
-    song_path = "/home/guillem/Pictures/Song"
-    song_url = "https://youtu.be/f1BQsyitRDE"
-    embedding_path = "/home/guillem/Pictures/Embedding"
-    model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
-    metadata_path = "/home/guillem/Pictures/Metadata_Final/metadata_final.csv"  # Updated path to uploaded file
-    store_metadata_path = "/home/guillem/Pictures/Metadata"
-
-    metric = "euclidean"
-    k = 1
-    n = 10
-    model = "effnet"
-
+def recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, k = 1, n = 3, model = "effnet"):
     store_metadata_path_file = store_metadata_path + "/metadata.csv"
-
     # Step 1: Download and embed the song
     song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path)
     compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path, song_name, channel_name)
-
-
 
     # Step 2: Load metadata
     metadata1 = pd.read_csv(metadata_path)
     metadata2 = pd.read_csv(store_metadata_path_file)
     metadata_df = pd.concat([metadata1, metadata2], ignore_index=True)
     metadata_df.columns = metadata_df.columns.str.strip()
-
 
     # Step 3: Load embeddings
     df = build_dataframe(model=model)
@@ -402,28 +388,60 @@ if __name__ == "__main__":
     # Step 7: Generate query ID and cluster
     song_name = song_name.replace('_', ' ').strip()
     channel_name = channel_name.strip()
-
-
     query_id = query_id_creator(channel_name, song_name)
+
     embedding_cols = [col for col in df.columns if col.startswith("e")]
+    df[embedding_cols] = df[embedding_cols].astype(float)  # ✅ Ensure float precision
+
+    # Cluster
     X = df[embedding_cols].values
     kmeans = KMeans(n_clusters=k, random_state=42)
     df[f"Cluster_{k}"] = kmeans.fit_predict(X)
 
-
-
-
     # Step 8: Recommend similar songs
     top_recs = recommend_similar_songs(df, query_id, n=n, k=k, metric=metric)
-    print(top_recs)
-    df.to_csv("/home/guillem/Downloads/final_song_database.csv", index=False)
+
+    # Optional: Save full CSV
     # Step 9: t-SNE and plot
     tsne = TSNE(n_components=2, perplexity=30, random_state=42)
     X_2d = tsne.fit_transform(X)
-    df["x"] = X_2d[:, 0]
-    df["y"] = X_2d[:, 1]
-    df["Label"] = df["Artist"] + " - " + df["Song"]
+
+    # ✅ Add new columns efficiently to avoid fragmentation
+    df = pd.concat([
+        df,
+        pd.DataFrame({
+            "x": X_2d[:, 0],
+            "y": X_2d[:, 1],
+            "Label": df["Artist"] + " - " + df["Song"]
+        }, index=df.index)
+    ], axis=1)
+
+    # Plot
     plot_recommendations(df, query_id, top_recs, k=k)
 
     # Step 10: Clear intermediate files
-    #clear_folders(song_path, embedding_path, store_metadata_path)
+    clear_folders(song_path, embedding_path, store_metadata_path)
+    return top_recs
+
+
+if __name__ == "__main__":
+    # --- PARAMETERS TO EDIT ---
+    song_path = "/home/guillem/Pictures/Song"
+    song_url = "https://youtu.be/fBUEkAR7ZCQ"
+    embedding_path = "/home/guillem/Pictures/Embedding"
+    model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
+    metadata_path = "/home/guillem/Pictures/Metadata_Final/metadata_final.csv"
+    store_metadata_path = "/home/guillem/Pictures/Metadata"
+    store_metadata_path_file = store_metadata_path + "/metadata.csv"
+
+    metric = "euclidean"  # "cosine" or "euclidean"
+    k = 1
+    n = 3
+    model = "effnet"  # "effnet" or "other_model"
+    # --- END PARAMETERS ---
+    # --- Run the recomendator ---
+    top_recs = recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, k, n, model)
+    print("Top recommendations:", top_recs)
+    # --- END RUN ---
+    #top_recs.to_csv("/home/guillem/Downloads/top_recommendations.csv", index=False)
+    
