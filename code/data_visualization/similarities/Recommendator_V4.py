@@ -28,7 +28,7 @@ def sanitize_title(title: str, channel: str) -> str:
         title = title.replace(ch, '')
     return f"{title.strip()}".replace(' ', '_')
 
-def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output_folder_metadata: str):
+def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output_folder_metadata: str, path_to_cookies: str ) -> tuple:
     """
     Downloads a single YouTube video's audio as MP3 into output_folder_song.
     Stores metadata in metadata.csv inside output_folder_metadata with format:
@@ -61,6 +61,7 @@ def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output
         },
         'quiet': False,
         'no_warnings': True,
+        'cookiefile': path_to_cookies,
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -314,6 +315,8 @@ def query_id_creator(artist, song):
 
 # --- Updated normalize_text to handle metadata format ---
 def normalize_text(text):
+    if not isinstance(text, str):
+        return ""  # Return an empty string or handle missing values as needed
     text = text.replace("_", " ")
     text = unicodedata.normalize("NFKD", text)
     text = "".join(c for c in text if not unicodedata.combining(c))
@@ -355,12 +358,14 @@ def clear_folders(folder1: str, folder2: str, folder3: str) -> None:
         print(f"✅ Cleared: {folder}")
 
 
-def recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, song_embeddings, k = 1, n = 3):
+def recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, song_embeddings, path_to_cookies, k = 1, n = 3):
+    clear_folders(song_path, embedding_path, store_metadata_path)
+
     store_metadata_path_file = store_metadata_path + "/metadata.csv"
     new_song_embeddings = embedding_path + "/embedding_song.pkl"
 
     # Step 1: Download and embed the song
-    song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path)
+    song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path, path_to_cookies)
     compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path, song_name, channel_name)
 
     # Step 2: Load metadata
@@ -426,21 +431,21 @@ def recomendator(song_path, song_url, embedding_path, model_path, metadata_path,
 if __name__ == "__main__":
     # --- PARAMETERS TO EDIT ---
     song_path = "/home/guillem/Pictures/Song"
-    song_url = "https://youtu.be/fBUEkAR7ZCQ"
-    embedding_path = "/home/guillem/Pictures/Embedding"
+    song_url = "https://youtu.be/Y-armzg4dSY" # Example URL
+    embedding_path = "/home/guillem/Pictures/Embedding" 
     model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
     metadata_path = "/home/guillem/Music/emsona/youtube_playlist_scraper/catalan_music_metadata.csv"
     store_metadata_path = "/home/guillem/Pictures/Metadata"
     store_metadata_path_file = store_metadata_path + "/metadata.csv"
-    song_embeddings = "/home/guillem/Downloads/canciones1-2025-05-18-effnet-artist.pkl"
+    song_embeddings = "/home/guillem/Music/emsona/code/essentia-models/effnet/embeddings/canciones1-2025-05-18-effnet-artist.pkl"
+    path_to_cookies = "/home/guillem/Music/emsona/cookies.txt"
 
     metric = "euclidean"  # "cosine" or "euclidean"
-    k = 1
-    n = 3
+    k = 10
+    n = 5
     # --- END PARAMETERS ---
     # --- Run the recomendator ---
-    top_recs = recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, song_embeddings, k, n)
+    top_recs = recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, song_embeddings, path_to_cookies, k, n)
     print("Top recommendations:", top_recs)
     # --- END RUN ---
     #top_recs.to_csv("/home/guillem/Downloads/top_recommendations.csv", index=False)
-    

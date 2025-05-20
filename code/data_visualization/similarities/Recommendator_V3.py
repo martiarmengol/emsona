@@ -427,7 +427,7 @@ def recomendator(song_path, song_url, embedding_path, model_path, metadata_path,
 if __name__ == "__main__":
     # --- PARAMETERS TO EDIT ---
     song_path = "/home/guillem/Pictures/Song"
-    song_url = "https://youtu.be/fBUEkAR7ZCQ"
+    song_url = "https://youtu.be/f1BQsyitRDE"
     embedding_path = "/home/guillem/Pictures/Embedding"
     model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
     metadata_path = "/home/guillem/Pictures/Metadata_Final/metadata_final.csv"
