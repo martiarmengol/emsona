@@ -23,6 +23,7 @@ import shutil
 import faiss
 import http.client
 from sklearn.decomposition import PCA
+import requests
 
 
 def sanitize_title(title: str, channel: str) -> str:
@@ -32,7 +33,7 @@ def sanitize_title(title: str, channel: str) -> str:
         title = title.replace(ch, '')
     return f"{title.strip()}".replace(' ', '_')
 
-def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output_folder_metadata: str, path_to_cookies: str ) -> tuple:
+def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output_folder_metadata: str) -> tuple:
     """
     Downloads a single YouTube video's audio as MP3 into output_folder_song.
     Stores metadata in metadata.csv inside output_folder_metadata with format:
@@ -65,7 +66,6 @@ def download_youtube_audio_mp3(youtube_url: str, output_folder_song: str, output
         },
         'quiet': False,
         'no_warnings': True,
-        'cookiefile': path_to_cookies,
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -463,7 +463,7 @@ def find_closest_embeddings_faiss(embeddings, query_embedding, top_k=5):
 def download_mp3_with_api(youtube_url, output_folder_song, output_folder_metadata):
     """
     Downloads an MP3 file from a YouTube video using the youtube-mp36 API.
-    Creates a metadata file in the same format as `download_youtube_audio_mp3`.
+    Creates a metadata file in the specified metadata folder.
 
     Args:
         youtube_url (str): The URL of the YouTube video.
@@ -471,33 +471,32 @@ def download_mp3_with_api(youtube_url, output_folder_song, output_folder_metadat
         output_folder_metadata (str): The folder where the metadata file will be saved.
 
     Returns:
-        tuple: (clean_title, channel_name, mp3_path)
+        tuple: (song_title, channel_name, mp3_path)
     """
     # Extract video ID from the YouTube URL
     video_id = youtube_url.split("v=")[-1] if "v=" in youtube_url else youtube_url.split("/")[-1]
 
     # API connection
-    conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
+    url = "https://youtube-mp36.p.rapidapi.com/dl"
+    querystring = {"id": video_id}
     headers = {
-        'x-rapidapi-key': "882822f1d3mshc30fbdb2e90cf17p19bf98jsnf5ce38ba6cf1",
-        'x-rapidapi-host': "youtube-mp36.p.rapidapi.com"
+        "x-rapidapi-key": "882822f1d3mshc30fbdb2e90cf17p19bf98jsnf5ce38ba6cf1",
+        "x-rapidapi-host": "youtube-mp36.p.rapidapi.com"
     }
 
-    # API request
-    conn.request("GET", f"/dl?id={video_id}", headers=headers)
-    res = conn.getresponse()
-    data = res.read()
+    response = requests.get(url, headers=headers, params=querystring)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch MP3 download link. Status code: {response.status_code}")
 
-    # Parse the response
-    response = json.loads(data.decode("utf-8"))
-    if response.get("status") != "ok":
-        raise Exception(f"Failed to download MP3: {response.get('msg', 'Unknown error')}")
+    data = response.json()
+    if data.get("status") != "ok":
+        raise Exception(f"Failed to fetch MP3 download link: {data.get('msg', 'Unknown error')}")
 
-    # Extract download link and metadata
-    download_link = response.get("link")
-    title = response.get("title", "unknown_title").replace(" ", "_").replace("/", "_")
-    channel_name = str(response.get("progress", "unknown_channel"))  # Ensure channel_name is a string
-    mp3_filename = f"{video_id}_{title}.mp3"
+    # Extract metadata and download link
+    download_link = data.get("link")
+    song_title = data.get("title", "unknown_title").replace(" ", "_").replace("/", "_")
+    channel_name = data.get("author", "unknown_channel")  # Placeholder for channel name
+    mp3_filename = f"{song_title}.mp3"
 
     # Ensure the output folders exist
     os.makedirs(output_folder_song, exist_ok=True)
@@ -505,19 +504,24 @@ def download_mp3_with_api(youtube_url, output_folder_song, output_folder_metadat
 
     # Download the MP3 file
     mp3_path = os.path.join(output_folder_song, mp3_filename)
-    with open(mp3_path, "wb") as mp3_file:
-        conn = http.client.HTTPSConnection(download_link.split("/")[2])
-        conn.request("GET", "/" + "/".join(download_link.split("/")[3:]))
-        mp3_res = conn.getresponse()
-        mp3_file.write(mp3_res.read())
+    try:
+        mp3_response = requests.get(download_link)
+        if mp3_response.status_code == 200:
+            with open(mp3_path, "wb") as f:
+                f.write(mp3_response.content)
+            print(f"MP3 downloaded and saved as '{mp3_path}'")
+        else:
+            raise Exception(f"Failed to download MP3. Status code: {mp3_response.status_code}")
+    except Exception as e:
+        raise Exception(f"Unexpected error while downloading MP3: {e}")
 
     # Create or update metadata file
     metadata_file = os.path.join(output_folder_metadata, "metadata.csv")
     new_entry = {
         'video_id': video_id,
-        'song_title': title,
+        'song_title': song_title,
         'channel_name': channel_name,
-        'original_title': response.get("title", "unknown_title"),
+        'original_title': data.get("title", "unknown_title"),
         'audio_file': mp3_filename
     }
 
@@ -529,9 +533,8 @@ def download_mp3_with_api(youtube_url, output_folder_song, output_folder_metadat
     else:
         pd.DataFrame([new_entry]).to_csv(metadata_file, index=False)
 
-    print(f"MP3 downloaded successfully: {mp3_path}")
     print(f"Metadata updated: {metadata_file}")
-    return title, channel_name, mp3_path
+    return song_title, channel_name, mp3_path
 
 
 def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, song_embeddings, k=1, n=5):
@@ -541,6 +544,9 @@ def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, met
     new_song_embeddings = embedding_path + "/embedding_song.pkl"
 
     # Step 1: Download and embed the song
+    # Using the yt-dlp method
+    #song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path) #We can change the way the youtube audio is downloaded
+    # Using the API method
     song_name, channel_name, mp3_path = download_mp3_with_api(song_url, song_path, store_metadata_path)
     compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path, song_name, channel_name)
 
@@ -550,23 +556,39 @@ def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, met
     metadata_df = pd.concat([metadata1, metadata2], ignore_index=True)
     metadata_df.columns = metadata_df.columns.str.strip()
 
+    # Add YouTube links to metadata
+    metadata_df["YT Link"] = "https://www.youtube.com/watch?v=" + metadata_df["video_id"]
+
     # Step 3: Load embeddings
     df = build_dataframe(song_embeddings, new_song_embeddings)
 
-    # Step 4: Extract embeddings and query embedding
+    # Step 4: Merge metadata into the main DataFrame
+    df["query_key"] = (df["Artist"] + " " + df["Song"]).apply(normalize_text)
+    metadata_df["meta_key"] = (metadata_df["channel_name"] + " " + metadata_df["song_title"]).apply(normalize_text)
+
+    # Perform fuzzy matching and merge
+    matched = fuzzy_merge(df, metadata_df, "query_key", "meta_key", threshold=85)
+    df = matched
+
+    # Step 5: Extract embeddings and query embedding
     embedding_cols = [col for col in df.columns if col.startswith("e")]
     embeddings = df[embedding_cols].values.astype('float32')
+
+    # Normalize song_name and channel_name to match DataFrame format
+    song_name = song_name.replace(" ", "_").strip()
+    channel_name = channel_name.replace(" ", "_").strip()
+
     query_row = df[(df["Artist"] == channel_name) & (df["Song"] == song_name)]
     if query_row.empty:
         raise ValueError(f"Query song '{song_name}' by '{channel_name}' not found in the DataFrame.")
     query_embedding = query_row[embedding_cols].values[0].astype('float32')
 
-    # Step 5: Cluster embeddings
+    # Step 6: Cluster embeddings
     kmeans = KMeans(n_clusters=k, random_state=42)
     df[f"Cluster_{k}"] = kmeans.fit_predict(embeddings)
     print("Columns in DataFrame after clustering:", df.columns)
 
-    # Step 6: Restrict FAISS search to the same cluster
+    # Step 7: Restrict FAISS search to the same cluster
     query_row = df[(df["Artist"] == channel_name) & (df["Song"] == song_name)]
     if query_row.empty:
         raise ValueError(f"Query song '{song_name}' by '{channel_name}' not found in the DataFrame.")
@@ -576,20 +598,22 @@ def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, met
     cluster_df = df[df[f"Cluster_{k}"] == query_cluster].copy()
     cluster_embeddings = cluster_df[embedding_cols].values.astype('float32')
 
-    # Step 7: Use FAISS to find closest embeddings within the cluster
+    # Step 8: Use FAISS to find closest embeddings within the cluster
     indices, distances = find_closest_embeddings_faiss(cluster_embeddings, query_embedding, top_k=n)
 
-    # Step 8: Retrieve top recommendations
+    # Step 9: Retrieve top recommendations
     recommendations = cluster_df.iloc[indices].copy()
     recommendations["Distance"] = distances
 
-    # Debugging: Check contents of recommendations
-    print("Recommendations DataFrame:")
-    print(recommendations.head())
-    print("Columns:", recommendations.columns)
+    # Exclude the query song from recommendations
+    recommendations = recommendations[
+        ~((recommendations["Artist"] == channel_name) & (recommendations["Song"] == song_name))
+    ]
 
+    # Debugging: Check contents of recommendations
+ 
     # Ensure required columns exist
-    required_columns = ["Artist", "Song", "Distance"]
+    required_columns = ["Artist", "Song", "Distance", "YT Link"]
     for col in required_columns:
         if col not in recommendations.columns:
             recommendations[col] = "N/A"  # Add placeholder if missing
@@ -600,11 +624,11 @@ def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, met
 
     recommendations = recommendations[required_columns]
 
-    # Step 9: Plot recommendations
+    # Step 10: Plot recommendations
     plot_recommendations(df, query_id_creator(channel_name, song_name), recommendations, k=k)
 
-    # Step 10: Clear intermediate files
-    clear_folders(song_path, embedding_path, store_metadata_path)
+    # Step 11: Clear intermediate files
+    #clear_folders(song_path, embedding_path, store_metadata_path)
     return recommendations
 
 
@@ -614,7 +638,7 @@ def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, met
 if __name__ == "__main__":
     # --- PARAMETERS TO EDIT ---
     song_path = "/home/guillem/Pictures/Song"
-    song_url = "https://youtu.be/Y-armzg4dSY" # Example URL
+    song_url = "https://youtu.be/gLlUg0vfRXo" # Example URL
     embedding_path = "/home/guillem/Pictures/Embedding" 
     model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
     metadata_path = "/home/guillem/Music/emsona/youtube_playlist_scraper/catalan_music_metadata.csv"
