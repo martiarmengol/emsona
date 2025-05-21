@@ -537,98 +537,177 @@ def download_mp3_with_api(youtube_url, output_folder_song, output_folder_metadat
     return song_title, channel_name, mp3_path
 
 
+
+
+def download_mp3_with_ytdlp(youtube_url, output_folder_song, output_folder_metadata):
+    """
+    Downloads an MP3 file from a YouTube video or playlist using yt-dlp.
+    Creates a metadata file in the specified metadata folder.
+
+    Args:
+        youtube_url (str): The URL of the YouTube video or playlist.
+        output_folder_song (str): The folder where the MP3 file(s) will be saved.
+        output_folder_metadata (str): The folder where the metadata file will be saved.
+
+    Returns:
+        list of tuples: Each tuple is (song_title, channel_name, mp3_path)
+    """
+    os.makedirs(output_folder_song, exist_ok=True)
+    os.makedirs(output_folder_metadata, exist_ok=True)
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'no_warnings': True,
+        'ignoreerrors': True,
+        'outtmpl': os.path.join(output_folder_song, '%(id)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '0'
+        }],
+        'overwrites': True
+    }
+
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(youtube_url, download=True)
+
+    entries = info.get("entries", None) if info and 'entries' in info else [info]
+
+    metadata_rows = []
+    metadata_file = os.path.join(output_folder_metadata, "metadata.csv")
+
+    for entry in entries:
+        if entry is None:
+            continue
+
+        video_id = entry.get("id")
+        original_title = entry.get("title") or "unknown_title"
+        channel_name = entry.get("channel") or entry.get("uploader") or "unknown_channel"
+
+        # Derive song_title from original_title (minus channel name if present)
+        song_title = original_title
+        if channel_name and song_title.startswith(channel_name):
+            song_title = song_title[len(channel_name):].lstrip("-: ").strip()
+
+        # Clean file name
+        song_title_clean = re.sub(r'[\\/*?:"<>|]', '', song_title.replace(" ", ""))
+        mp3_filename = f"{video_id}_{song_title_clean}.mp3"
+        temp_path = os.path.join(output_folder_song, f"{video_id}.mp3")
+        mp3_path = os.path.join(output_folder_song, mp3_filename)
+
+        # Rename the downloaded file
+        if os.path.exists(temp_path):
+            os.replace(temp_path, mp3_path)
+
+        # Update metadata
+        new_entry = {
+            'video_id': video_id,
+            'song_title': song_title,
+            'channel_name': channel_name,
+            'original_title': original_title,
+            'audio_file': mp3_filename
+        }
+        metadata_rows.append(new_entry)
+
+        print(f"Downloaded: {mp3_filename}")
+
+    # Append to or create metadata.csv
+    if os.path.exists(metadata_file):
+        df = pd.read_csv(metadata_file)
+        existing_ids = df['video_id'].astype(str).tolist()
+        new_rows = [row for row in metadata_rows if row['video_id'] not in existing_ids]
+        if new_rows:
+            df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
+            df.to_csv(metadata_file, index=False)
+    else:
+        pd.DataFrame(metadata_rows).to_csv(metadata_file, index=False)
+
+    return song_title, channel_name, mp3_path
+
+
 def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, song_embeddings, k=1, n=5):
-    clear_folders(song_path, embedding_path, store_metadata_path)
+    import pandas as pd
 
-    store_metadata_path_file = store_metadata_path + "/metadata.csv"
-    new_song_embeddings = embedding_path + "/embedding_song.pkl"
+    store_metadata_path_file = os.path.join(store_metadata_path, "metadata.csv")
+    new_song_embeddings = os.path.join(embedding_path, "embedding_song.pkl")
 
-    # Step 1: Download and embed the song
-    # Using the yt-dlp method
-    #song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path) #We can change the way the youtube audio is downloaded
-    # Using the API method
-    song_name, channel_name, mp3_path = download_mp3_with_api(song_url, song_path, store_metadata_path)
+    # Step 1: Download and embed the song using fallback methods
+    try:
+        clear_folders(song_path, embedding_path, store_metadata_path)
+        song_name, channel_name, mp3_path = download_mp3_with_ytdlp(song_url, song_path, store_metadata_path)[0]
+    except Exception as e1:
+        print(f"[yt-dlp] Failed: {e1}")
+        clear_folders(song_path, embedding_path, store_metadata_path)
+        try:
+            song_name, channel_name, mp3_path = download_youtube_audio_mp3(song_url, song_path, store_metadata_path)
+        except Exception as e2:
+            print(f"[youtube_audio_mp3] Failed: {e2}")
+            clear_folders(song_path, embedding_path, store_metadata_path)
+            try:
+                song_name, channel_name, mp3_path = download_mp3_with_api(song_url, song_path, store_metadata_path)
+            except Exception as e3:
+                raise RuntimeError(f"All download methods failed:\n- yt-dlp: {e1}\n- youtube_audio_mp3: {e2}\n- API: {e3}")
+
+    # Step 2: Compute embeddings
     compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path, song_name, channel_name)
 
-    # Step 2: Load metadata
+    # Step 3: Load metadata
     metadata1 = pd.read_csv(metadata_path)
     metadata2 = pd.read_csv(store_metadata_path_file)
     metadata_df = pd.concat([metadata1, metadata2], ignore_index=True)
     metadata_df.columns = metadata_df.columns.str.strip()
-
-    # Add YouTube links to metadata
     metadata_df["YT Link"] = "https://www.youtube.com/watch?v=" + metadata_df["video_id"]
 
-    # Step 3: Load embeddings
+    # Step 4: Load embeddings
     df = build_dataframe(song_embeddings, new_song_embeddings)
 
-    # Step 4: Merge metadata into the main DataFrame
+    # Step 5: Merge metadata into the main DataFrame
     df["query_key"] = (df["Artist"] + " " + df["Song"]).apply(normalize_text)
     metadata_df["meta_key"] = (metadata_df["channel_name"] + " " + metadata_df["song_title"]).apply(normalize_text)
+    df = fuzzy_merge(df, metadata_df, "query_key", "meta_key", threshold=85)
 
-    # Perform fuzzy matching and merge
-    matched = fuzzy_merge(df, metadata_df, "query_key", "meta_key", threshold=85)
-    df = matched
-
-    # Step 5: Extract embeddings and query embedding
+    # Step 6: Extract embeddings and query embedding
     embedding_cols = [col for col in df.columns if col.startswith("e")]
     embeddings = df[embedding_cols].values.astype('float32')
 
-    # Normalize song_name and channel_name to match DataFrame format
     song_name = song_name.replace(" ", "_").strip()
     channel_name = channel_name.replace(" ", "_").strip()
-
     query_row = df[(df["Artist"] == channel_name) & (df["Song"] == song_name)]
     if query_row.empty:
         raise ValueError(f"Query song '{song_name}' by '{channel_name}' not found in the DataFrame.")
     query_embedding = query_row[embedding_cols].values[0].astype('float32')
 
-    # Step 6: Cluster embeddings
+    # Step 7: Cluster embeddings
     kmeans = KMeans(n_clusters=k, random_state=42)
     df[f"Cluster_{k}"] = kmeans.fit_predict(embeddings)
-    print("Columns in DataFrame after clustering:", df.columns)
 
-    # Step 7: Restrict FAISS search to the same cluster
-    query_row = df[(df["Artist"] == channel_name) & (df["Song"] == song_name)]
-    if query_row.empty:
-        raise ValueError(f"Query song '{song_name}' by '{channel_name}' not found in the DataFrame.")
-    print("Query row:", query_row)
-
+    # Step 8: Restrict FAISS search to the same cluster
     query_cluster = query_row[f"Cluster_{k}"].values[0]
     cluster_df = df[df[f"Cluster_{k}"] == query_cluster].copy()
     cluster_embeddings = cluster_df[embedding_cols].values.astype('float32')
 
-    # Step 8: Use FAISS to find closest embeddings within the cluster
+    # Step 9: FAISS similarity search
     indices, distances = find_closest_embeddings_faiss(cluster_embeddings, query_embedding, top_k=n)
-
-    # Step 9: Retrieve top recommendations
     recommendations = cluster_df.iloc[indices].copy()
     recommendations["Distance"] = distances
 
-    # Exclude the query song from recommendations
+    # Step 10: Filter out the query song
     recommendations = recommendations[
         ~((recommendations["Artist"] == channel_name) & (recommendations["Song"] == song_name))
     ]
 
-    # Debugging: Check contents of recommendations
- 
-    # Ensure required columns exist
+    # Step 11: Ensure columns and plot
     required_columns = ["Artist", "Song", "Distance", "YT Link"]
     for col in required_columns:
         if col not in recommendations.columns:
-            recommendations[col] = "N/A"  # Add placeholder if missing
-
-    # Handle empty DataFrame
+            recommendations[col] = "N/A"
     if recommendations.empty:
         raise ValueError("No recommendations found. Please check the input data or FAISS search logic.")
 
-    recommendations = recommendations[required_columns]
-
-    # Step 10: Plot recommendations
     plot_recommendations(df, query_id_creator(channel_name, song_name), recommendations, k=k)
 
-    # Step 11: Clear intermediate files
-    #clear_folders(song_path, embedding_path, store_metadata_path)
     return recommendations
 
 
