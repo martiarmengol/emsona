@@ -20,6 +20,10 @@ import datetime
 from pytube import YouTube
 from pydub import AudioSegment
 import shutil
+import faiss
+import http.client
+from sklearn.decomposition import PCA
+
 
 def sanitize_title(title: str, channel: str) -> str:
     # Simple title cleaner – you can customize this further
@@ -238,11 +242,18 @@ def recommend_similar_songs(df, query_id, n=5, k=12, metric='cosine', query_embe
 
 # --- Plotting function ---
 def plot_recommendations(df, query_id, recommendations, k):
+    # Reduce embeddings to 2D for visualization
+    embedding_cols = [col for col in df.columns if col.startswith("e")]
+    pca = PCA(n_components=2)
+    df[['x', 'y']] = pca.fit_transform(df[embedding_cols])
+
+    # Create scatter plot
     fig = px.scatter(
-        df, x="x", y="y", color=df[f"Cluster_{k}"].astype(str), hover_name="Label",
+        df, x="x", y="y", color=df[f"Cluster_{k}"].astype(str), hover_name="Song",
         title=f"Query & Recommendations for {query_id} (k={k})"
     )
 
+    # Highlight query song and recommendations
     query_artist, query_song = query_id.split("::")
     query_mask = (df["Artist"] == query_artist) & (df["Song"] == query_song)
     rec_mask = df.apply(lambda row: f"{row['Artist']}::{row['Song']}" in
@@ -253,8 +264,7 @@ def plot_recommendations(df, query_id, recommendations, k):
                     text=["Query"], textposition="top center")
 
     fig.add_scatter(x=df[rec_mask]["x"], y=df[rec_mask]["y"],
-                    mode='markers+text', name='Recommendations', marker=dict(size=10, color='red'),
-                    text=recommendations["Song"], textposition="bottom center")
+                    mode='markers', name='Recommendations', marker=dict(size=12, color='red'))
 
     fig.show()
 
@@ -428,6 +438,179 @@ def recomendator(song_path, song_url, embedding_path, model_path, metadata_path,
     return top_recs
 
 
+def find_closest_embeddings_faiss(embeddings, query_embedding, top_k=5):
+    """
+    Use FAISS to find the closest embeddings to the query embedding.
+
+    Parameters:
+    - embeddings: numpy array of shape (num_embeddings, embedding_dim)
+    - query_embedding: numpy array of shape (embedding_dim,)
+    - top_k: number of closest embeddings to return
+
+    Returns:
+    - indices: indices of the closest embeddings
+    - distances: distances to the closest embeddings
+    """
+    embedding_dim = embeddings.shape[1]
+    index = faiss.IndexFlatL2(embedding_dim)  # L2 distance
+    index.add(embeddings)  # Add embeddings to the FAISS index
+
+    query_embedding = query_embedding.reshape(1, -1)  # Reshape for FAISS
+    distances, indices = index.search(query_embedding, top_k)  # Search for top_k neighbors
+    return indices[0], distances[0]
+
+
+def download_mp3_with_api(youtube_url, output_folder_song, output_folder_metadata):
+    """
+    Downloads an MP3 file from a YouTube video using the youtube-mp36 API.
+    Creates a metadata file in the same format as `download_youtube_audio_mp3`.
+
+    Args:
+        youtube_url (str): The URL of the YouTube video.
+        output_folder_song (str): The folder where the MP3 file will be saved.
+        output_folder_metadata (str): The folder where the metadata file will be saved.
+
+    Returns:
+        tuple: (clean_title, channel_name, mp3_path)
+    """
+    # Extract video ID from the YouTube URL
+    video_id = youtube_url.split("v=")[-1] if "v=" in youtube_url else youtube_url.split("/")[-1]
+
+    # API connection
+    conn = http.client.HTTPSConnection("youtube-mp36.p.rapidapi.com")
+    headers = {
+        'x-rapidapi-key': "882822f1d3mshc30fbdb2e90cf17p19bf98jsnf5ce38ba6cf1",
+        'x-rapidapi-host': "youtube-mp36.p.rapidapi.com"
+    }
+
+    # API request
+    conn.request("GET", f"/dl?id={video_id}", headers=headers)
+    res = conn.getresponse()
+    data = res.read()
+
+    # Parse the response
+    response = json.loads(data.decode("utf-8"))
+    if response.get("status") != "ok":
+        raise Exception(f"Failed to download MP3: {response.get('msg', 'Unknown error')}")
+
+    # Extract download link and metadata
+    download_link = response.get("link")
+    title = response.get("title", "unknown_title").replace(" ", "_").replace("/", "_")
+    channel_name = str(response.get("progress", "unknown_channel"))  # Ensure channel_name is a string
+    mp3_filename = f"{video_id}_{title}.mp3"
+
+    # Ensure the output folders exist
+    os.makedirs(output_folder_song, exist_ok=True)
+    os.makedirs(output_folder_metadata, exist_ok=True)
+
+    # Download the MP3 file
+    mp3_path = os.path.join(output_folder_song, mp3_filename)
+    with open(mp3_path, "wb") as mp3_file:
+        conn = http.client.HTTPSConnection(download_link.split("/")[2])
+        conn.request("GET", "/" + "/".join(download_link.split("/")[3:]))
+        mp3_res = conn.getresponse()
+        mp3_file.write(mp3_res.read())
+
+    # Create or update metadata file
+    metadata_file = os.path.join(output_folder_metadata, "metadata.csv")
+    new_entry = {
+        'video_id': video_id,
+        'song_title': title,
+        'channel_name': channel_name,
+        'original_title': response.get("title", "unknown_title"),
+        'audio_file': mp3_filename
+    }
+
+    if os.path.exists(metadata_file):
+        df = pd.read_csv(metadata_file)
+        if video_id not in df['video_id'].astype(str).tolist():
+            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+            df.to_csv(metadata_file, index=False)
+    else:
+        pd.DataFrame([new_entry]).to_csv(metadata_file, index=False)
+
+    print(f"MP3 downloaded successfully: {mp3_path}")
+    print(f"Metadata updated: {metadata_file}")
+    return title, channel_name, mp3_path
+
+
+def recomendator_with_faiss(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, song_embeddings, k=1, n=5):
+    clear_folders(song_path, embedding_path, store_metadata_path)
+
+    store_metadata_path_file = store_metadata_path + "/metadata.csv"
+    new_song_embeddings = embedding_path + "/embedding_song.pkl"
+
+    # Step 1: Download and embed the song
+    song_name, channel_name, mp3_path = download_mp3_with_api(song_url, song_path, store_metadata_path)
+    compute_effnet_embeddings_for_folder(song_path, model_path, embedding_path, song_name, channel_name)
+
+    # Step 2: Load metadata
+    metadata1 = pd.read_csv(metadata_path)
+    metadata2 = pd.read_csv(store_metadata_path_file)
+    metadata_df = pd.concat([metadata1, metadata2], ignore_index=True)
+    metadata_df.columns = metadata_df.columns.str.strip()
+
+    # Step 3: Load embeddings
+    df = build_dataframe(song_embeddings, new_song_embeddings)
+
+    # Step 4: Extract embeddings and query embedding
+    embedding_cols = [col for col in df.columns if col.startswith("e")]
+    embeddings = df[embedding_cols].values.astype('float32')
+    query_row = df[(df["Artist"] == channel_name) & (df["Song"] == song_name)]
+    if query_row.empty:
+        raise ValueError(f"Query song '{song_name}' by '{channel_name}' not found in the DataFrame.")
+    query_embedding = query_row[embedding_cols].values[0].astype('float32')
+
+    # Step 5: Cluster embeddings
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    df[f"Cluster_{k}"] = kmeans.fit_predict(embeddings)
+    print("Columns in DataFrame after clustering:", df.columns)
+
+    # Step 6: Restrict FAISS search to the same cluster
+    query_row = df[(df["Artist"] == channel_name) & (df["Song"] == song_name)]
+    if query_row.empty:
+        raise ValueError(f"Query song '{song_name}' by '{channel_name}' not found in the DataFrame.")
+    print("Query row:", query_row)
+
+    query_cluster = query_row[f"Cluster_{k}"].values[0]
+    cluster_df = df[df[f"Cluster_{k}"] == query_cluster].copy()
+    cluster_embeddings = cluster_df[embedding_cols].values.astype('float32')
+
+    # Step 7: Use FAISS to find closest embeddings within the cluster
+    indices, distances = find_closest_embeddings_faiss(cluster_embeddings, query_embedding, top_k=n)
+
+    # Step 8: Retrieve top recommendations
+    recommendations = cluster_df.iloc[indices].copy()
+    recommendations["Distance"] = distances
+
+    # Debugging: Check contents of recommendations
+    print("Recommendations DataFrame:")
+    print(recommendations.head())
+    print("Columns:", recommendations.columns)
+
+    # Ensure required columns exist
+    required_columns = ["Artist", "Song", "Distance"]
+    for col in required_columns:
+        if col not in recommendations.columns:
+            recommendations[col] = "N/A"  # Add placeholder if missing
+
+    # Handle empty DataFrame
+    if recommendations.empty:
+        raise ValueError("No recommendations found. Please check the input data or FAISS search logic.")
+
+    recommendations = recommendations[required_columns]
+
+    # Step 9: Plot recommendations
+    plot_recommendations(df, query_id_creator(channel_name, song_name), recommendations, k=k)
+
+    # Step 10: Clear intermediate files
+    clear_folders(song_path, embedding_path, store_metadata_path)
+    return recommendations
+
+
+
+
+
 if __name__ == "__main__":
     # --- PARAMETERS TO EDIT ---
     song_path = "/home/guillem/Pictures/Song"
@@ -441,11 +624,11 @@ if __name__ == "__main__":
     path_to_cookies = "/home/guillem/Music/emsona/cookies.txt"
 
     metric = "euclidean"  # "cosine" or "euclidean"
-    k = 10
+    k = 1
     n = 5
     # --- END PARAMETERS ---
     # --- Run the recomendator ---
-    top_recs = recomendator(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, metric, song_embeddings, path_to_cookies, k, n)
+    top_recs = recomendator_with_faiss(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, song_embeddings, k, n)
     print("Top recommendations:", top_recs)
     # --- END RUN ---
     #top_recs.to_csv("/home/guillem/Downloads/top_recommendations.csv", index=False)
