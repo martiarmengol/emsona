@@ -108,4 +108,9 @@ La aplicación utiliza una imagen de fondo personalizable (`bg.png`) ubicada en 
 - **Extracción de IDs de YouTube**: El sistema utiliza múltiples métodos para extraer correctamente el ID de video de diferentes formatos de URL de YouTube.
 - **Reproducción de videos**: Los videos se muestran expandiéndose hacia abajo cuando se hace clic en una recomendación y se cierran automáticamente al abrir otro video.
 - **Integración con sistemas externos**: La función de valoración está preparada para integrarse con sistemas externos mediante una función `registrarValoracion(valoracion, linkUsuario, linkRecomendacion)`.
-- **Gestión de datos CSV**: La aplicación lee y procesa datos de canciones desde archivos CSV, permitiendo una fácil actualización del catálogo musical. 
+- **Gestión de datos CSV**: La aplicación lee y procesa datos de canciones desde archivos CSV, permitiendo una fácil actualización del catálogo musical.
+
+## Notas adicionales
+
+- La interfaz de usuario está completamente en catalán.
+- Copyright © 2025 Em Sona - Todos los derechos reservados. 

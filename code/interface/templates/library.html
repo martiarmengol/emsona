@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ca">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biblioteca de Canciones - Em Sona</title>
+    <title>Biblioteca - Em Sona</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="/static/css/styles.css">
@@ -13,18 +13,18 @@
         <div class="flex justify-between items-center max-w-7xl mx-auto">
             <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
             <nav>
-                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inicio</a>
-                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Más Gustadas</a>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
                 <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
-                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosotros</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
             </nav>
         </div>
     </header>
 
     <div class="max-w-4xl mx-auto px-4 py-6">
         <div class="text-center mb-8">
-            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Biblioteca de <span class="text-purple-200">Canciones</span></h1>
-            <p class="text-xl text-white opacity-80">Descubre nuestra colección de música catalana</p>
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Biblioteca de <span class="text-purple-200">Cançons</span></h1>
+            <p class="text-xl text-white opacity-80">Descobreix la nostra col·lecció de música catalana</p>
         </div>
         
         <div class="content-panel mb-6">
@@ -38,23 +38,23 @@
                     </div>
                     <input type="text" name="query" value="{{ query }}" 
                            class="search-input" 
-                           placeholder="Buscar por título, artista o género...">
+                           placeholder="Cerca per títol, artista o gènere...">
                 </div>
             </form>
             
-            <!-- Contador de resultados -->
+            <!-- Comptador de resultats -->
             <div class="flex justify-between items-center mb-6">
                 <p class="text-white opacity-80">
                     {% if query %}
-                        Mostrando resultados para "{{ query }}"
+                        Mostrant resultats per a "{{ query }}"
                     {% endif %}
                 </p>
                 <p class="text-white opacity-80">
-                    {{ total_canciones }} canciones encontradas
+                    {{ total_canciones }} cançons trobades
                 </p>
             </div>
             
-            <!-- Lista de canciones -->
+            <!-- Llista de cançons -->
             <ul class="divide-y divide-white divide-opacity-10">
                 {% for cancion in canciones %}
                 <li class="py-4 song-item">
@@ -82,10 +82,10 @@
                 {% endfor %}
             </ul>
             
-            <!-- Paginación -->
+            <!-- Paginació -->
             <div class="mt-8 flex justify-center">
                 <div class="flex space-x-2">
-                    <!-- Botón Anterior -->
+                    <!-- Botó Anterior -->
                     {% if page > 1 %}
                         <a href="/library?query={{ query }}&page={{ page - 1 }}" class="pagination-button">
                             &laquo; Anterior
@@ -94,7 +94,7 @@
                         <span class="pagination-button disabled">&laquo; Anterior</span>
                     {% endif %}
                     
-                    <!-- Botones de páginas -->
+                    <!-- Botons de pàgines -->
                     {% for p in range(1, total_paginas + 1) %}
                         {% if p == page %}
                             <span class="pagination-button active">{{ p }}</span>
@@ -105,29 +105,20 @@
                         {% endif %}
                     {% endfor %}
                     
-                    <!-- Botón Siguiente -->
+                    <!-- Botó Següent -->
                     {% if page < total_paginas %}
                         <a href="/library?query={{ query }}&page={{ page + 1 }}" class="pagination-button">
-                            Siguiente &raquo;
+                            Següent &raquo;
                         </a>
                     {% else %}
-                        <span class="pagination-button disabled">Siguiente &raquo;</span>
+                        <span class="pagination-button disabled">Següent &raquo;</span>
                     {% endif %}
                 </div>
             </div>
-            
-            <!-- Botón Ver Más (alternativa a paginación) -->
-            {% if page < total_paginas %}
-            <div class="mt-6 text-center">
-                <a href="/library?query={{ query }}&page={{ page + 1 }}" class="load-more">
-                    Ver más canciones
-                </a>
-            </div>
-            {% endif %}
         </div>
         
         <footer class="mt-8 text-center text-xs text-purple-200 pb-6">
-            <p>&copy; 2023 Em Sona - Diseñado para amantes de la música catalana</p>
+            <p>&copy; 2025 Em Sona - Tots els drets reservats</p>
         </footer>
     </div>
 </body>

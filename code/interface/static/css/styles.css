@@ -36,7 +36,7 @@ body {
 
 /* Sobrescribir la clase max-w-4xl de Tailwind */
 .max-w-4xl {
-    min-width: 800px !important;
+    min-width: 900px !important;
 }
 
 .content-panel {
