@@ -50,6 +50,14 @@ http://127.0.0.1:5000/
   - Buscador por título, artista o género
   - Paginación con 10 canciones por página
   - Enlaces directos a los videos de YouTube
+- **Canciones Más Gustadas**:
+  - Ranking de las canciones catalanas más populares
+  - Visualización del número de "likes" para cada canción
+  - Destacado especial para las 3 primeras posiciones
+  - Enlaces directos a YouTube para escuchar las canciones
+- **Sobre Nosotros**:
+  - Información sobre el proyecto universitario
+  - Sección de contacto con enlace mailto
 
 ## Características técnicas
 
@@ -86,7 +94,9 @@ interface/
     ├── index.html          # Página inicial
     ├── loading.html        # Pantalla de carga
     ├── results.html        # Página de resultados
-    └── library.html        # Biblioteca de canciones
+    ├── library.html        # Biblioteca de canciones
+    ├── liked.html          # Canciones más gustadas
+    └── about.html          # Página sobre nosotros
 ```
 
 ## Personalización

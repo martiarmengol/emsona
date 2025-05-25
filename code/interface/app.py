@@ -127,5 +127,23 @@ def library():
 def about():
     return render_template('about.html', pagina_activa='nosotros')
 
+@app.route('/liked')
+def liked():
+    # Datos de ejemplo para las canciones más gustadas
+    canciones_gustadas = [
+        {"titulo": "L'Empordà", "artista": "Sopa de Cabra", "likes": 1243, "link": "https://www.youtube.com/watch?v=RV2gJPXLslA"},
+        {"titulo": "Boig per tu", "artista": "Sau", "likes": 987, "link": "https://www.youtube.com/watch?v=f1h3D9IJDMI"},
+        {"titulo": "Bon dia", "artista": "Els Pets", "likes": 845, "link": "https://www.youtube.com/watch?v=mySe9OnYvzM"},
+        {"titulo": "Paraules d'Amor", "artista": "Joan Manuel Serrat", "likes": 752, "link": "https://www.youtube.com/watch?v=h9t4_YpZ1RY"},
+        {"titulo": "Jo vull ser rei", "artista": "Els Pets", "likes": 621, "link": "https://www.youtube.com/watch?v=lc5kSz6Ga2o"},
+        {"titulo": "Qualsevol nit pot sortir el sol", "artista": "Jaume Sisa", "likes": 592, "link": "https://www.youtube.com/watch?v=aaVwzFZXpFo"},
+        {"titulo": "El meu avi", "artista": "La Trinca", "likes": 488, "link": "https://www.youtube.com/watch?v=W2u1X9BNeFI"},
+        {"titulo": "Fes-te fotre", "artista": "Lax'n'Busto", "likes": 407, "link": "https://www.youtube.com/watch?v=7USdD_NM50U"},
+        {"titulo": "Tot és possible", "artista": "Txarango", "likes": 372, "link": "https://www.youtube.com/watch?v=t0U0Iap2omg"},
+        {"titulo": "La Flama", "artista": "Obeses", "likes": 327, "link": "https://www.youtube.com/watch?v=zVLGwcKG7iM"}
+    ]
+    
+    return render_template('liked.html', canciones=canciones_gustadas, pagina_activa='liked')
+
 if __name__ == '__main__':
     app.run(debug=True) 
