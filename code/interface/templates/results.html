@@ -10,10 +10,12 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.9) 100%), url('/static/images/bg.png');
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.0) 100%), url('/static/images/bg.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
         
         .song-card {
@@ -60,8 +62,10 @@
             width: 100%;
             height: 300px;
             background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .tsne-point {
@@ -113,26 +117,63 @@
             transform-origin: 0 0;
             pointer-events: none;
         }
+        
+        .content-panel {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .search-button {
+            background-color: white;
+            color: #4338ca;
+            font-weight: 600;
+            padding: 12px 32px;
+            border-radius: 100px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
-<body class="min-h-screen py-10 px-4">
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
-            <p class="text-purple-200">Tus recomendaciones de música catalana</p>
-        </header>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Inicio</a>
+                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Sobre nosotros</a>
+                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Contacto</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-xl text-white opacity-80">Tus recomendaciones de música catalana</p>
+        </div>
         
-        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 mb-8 border border-white border-opacity-20">
-            <h2 class="text-xl font-semibold text-white mb-6 tracking-tight">Mapa de similitud musical</h2>
-            <div id="tsne-container" class="mb-4"></div>
+        <div class="content-panel mb-6">
+            <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Mapa de similitud musical</h2>
+            <div id="tsne-container" class="mb-3"></div>
             <p class="text-xs text-purple-200 text-center mt-2">Las canciones más cercanas entre sí tienen características musicales similares</p>
         </div>
         
-        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 border border-white border-opacity-20">
-            <h2 class="text-xl font-semibold text-white mb-6 tracking-tight">Top 5 canciones similares</h2>
+        <div class="content-panel">
+            <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Top 5 canciones similares</h2>
             <ul class="divide-y divide-white divide-opacity-10">
                 {% for cancion in canciones %}
-                <li class="py-5 flex items-center song-card" data-index="{{ loop.index0 }}">
+                <li class="py-4 flex items-center song-card" data-index="{{ loop.index0 }}">
                     <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
                         {{ loop.index }}
                     </div>
@@ -156,15 +197,15 @@
                 {% endfor %}
             </ul>
             
-            <div class="mt-10 text-center">
-                <a href="/" class="inline-block bg-white text-indigo-700 font-medium py-3 px-8 rounded-md transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
+            <div class="mt-8 text-center">
+                <a href="/" class="search-button">
                     BUSCAR OTRA CANCIÓN
                 </a>
             </div>
         </div>
         
-        <footer class="mt-12 text-center text-xs text-purple-200">
-            <p>Diseñado para amantes de la música catalana</p>
+        <footer class="mt-8 text-center text-xs text-purple-200 pb-6">
+            <p>&copy; 2023 Em Sona - Diseñado para amantes de la música catalana</p>
         </footer>
     </div>
     
@@ -175,22 +216,22 @@
             const canciones = [
                 {% for cancion in canciones %}
                 {
-                    titulo: "{{ cancion.titulo }}",
-                    artista: "{{ cancion.artista }}",
-                    similitud: "{{ cancion.similitud }}",
-                    x: Math.random() * 80 + 10, // Posición X aleatoria entre 10% y 90%
-                    y: Math.random() * 80 + 10  // Posición Y aleatoria entre 10% y 90%
+                    "titulo": "{{ cancion.titulo }}",
+                    "artista": "{{ cancion.artista }}",
+                    "similitud": "{{ cancion.similitud }}",
+                    "x": Math.random() * 80 + 10,
+                    "y": Math.random() * 80 + 10
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ];
             
             // Añadimos un punto para la canción de consulta en el centro
             const cancionConsulta = {
-                titulo: "Tu canción",
-                artista: "Canción de referencia",
-                similitud: "100%",
-                x: 50,
-                y: 50
+                "titulo": "Tu canción",
+                "artista": "Canción de referencia",
+                "similitud": "100%",
+                "x": 50,
+                "y": 50
             };
             
             const container = document.getElementById('tsne-container');
