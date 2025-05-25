@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Em Sona – Sugerir una canción</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.0) 100%),
+                  url('/static/images/bg.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .wave-animation {
+      display: flex; justify-content: center; align-items: center;
+      height: 40px; margin: 30px 0;
+    }
+    .wave-bar {
+      width: 4px; margin: 0 2px; background-color: #fff;
+      border-radius: 3px; opacity: 0.7;
+      animation: wave 1.5s ease-in-out infinite;
+    }
+    @keyframes wave {
+      0%,100% { height: 10px; }
+      50%    { height: 40px; }
+    }
+    .wave-bar:nth-child(1) { animation-delay: 0.1s; }
+    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(5) { animation-delay: 0.5s; }
+    .wave-bar:nth-child(6) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(7) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(8) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(9) { animation-delay: 0.1s; }
+
+    .submit-button {
+      border-radius: 12px;
+      padding: 12px 24px;
+      background-color: white;
+      color: #4338ca;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+    .submit-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 20px -3px rgba(0,0,0,0.2);
+    }
+    .submit-button svg { margin-right: 8px; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-white bg-opacity-10 backdrop-blur-lg rounded-xl
+              shadow-2xl overflow-hidden p-8 border border-white border-opacity-20">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold text-white mb-2 tracking-tight">
+        Em <span class="text-purple-200">Sona</span>
+      </h1>
+      <p class="text-purple-200 mb-8 text-sm">
+        Sugiérenos una canción para añadir a nuestra base de datos
+      </p>
+
+      <div class="wave-animation">
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      </div>
+
+      <form action="{{ url_for('suggest_song') }}" method="POST" class="space-y-6">
+        <div>
+          <label for="title" class="block text-sm font-medium text-white mb-2 uppercase tracking-wide">
+            Título de la canción
+          </label>
+          <input
+            type="text" id="title" name="title" required
+            class="w-full px-4 py-3 bg-white bg-opacity-10 border-b-2 border-purple-300
+                   focus:border-white focus:outline-none transition-colors
+                   rounded-lg text-white placeholder-purple-200"
+            placeholder="P. ej. Boig per tu"
+          >
+        </div>
+
+        <div>
+          <label for="artist" class="block text-sm font-medium text-white mb-2 uppercase tracking-wide">
+            Artista / Banda
+          </label>
+          <input
+            type="text" id="artist" name="artist" required
+            class="w-full px-4 py-3 bg-white bg-opacity-10 border-b-2 border-purple-300
+                   focus:border-white focus:outline-none transition-colors
+                   rounded-lg text-white placeholder-purple-200"
+            placeholder="P. ej. Sau"
+          >
+        </div>
+
+        <div>
+          <label for="album" class="block text-sm font-medium text-white mb-2 uppercase tracking-wide">
+            Álbum (opcional)
+          </label>
+          <input
+            type="text" id="album" name="album"
+            class="w-full px-4 py-3 bg-white bg-opacity-10 border-b-2 border-purple-300
+                   focus:border-white focus:outline-none transition-colors
+                   rounded-lg text-white placeholder-purple-200"
+            placeholder="P. ej. Música de carn"
+          >
+        </div>
+
+        <div>
+          <label for="genre" class="block text-sm font-medium text-white mb-2 uppercase tracking-wide">
+            Género
+          </label>
+          <select id="genre" name="genre" required
+                  class="w-full px-4 py-3 bg-white bg-opacity-10 border-b-2 border-purple-300
+                         focus:border-white focus:outline-none transition-colors
+                         rounded-lg text-white">
+            <option value="" disabled selected hidden>Selecciona un género</option>
+            <option>Pop</option>
+            <option>Rock</option>
+            <option>Folk</option>
+            <option>Indie</option>
+            <option>Electrónica</option>
+            <option>Otro</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="link" class="block text-sm font-medium text-white mb-2 uppercase tracking-wide">
+            Enlace (YouTube, Spotify...)
+          </label>
+          <input
+            type="url" id="link" name="link"
+            class="w-full px-4 py-3 bg-white bg-opacity-10 border-b-2 border-purple-300
+                   focus:border-white focus:outline-none transition-colors
+                   rounded-lg text-white placeholder-purple-200"
+            placeholder="https://"
+          >
+        </div>
+
+        <button type="submit" class="submit-button w-full">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 13l4 4L19 7" />
+          </svg>
+          Enviar sugerencia
+        </button>
+      </form>
+
+      <p class="text-xs text-purple-200 mt-8">
+        ¡Gracias por ayudarnos a hacer crecer nuestra colección!
+      </p>
+    </div>
+  </div>
+</body>
+</html>
