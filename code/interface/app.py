@@ -123,5 +123,9 @@ def library():
                           total_canciones=total_canciones,
                           pagina_activa='biblioteca')
 
+@app.route('/about')
+def about():
+    return render_template('about.html', pagina_activa='nosotros')
+
 if __name__ == '__main__':
     app.run(debug=True) 

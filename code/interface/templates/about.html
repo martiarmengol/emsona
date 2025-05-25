@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sobre Nosotros - Em Sona</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.0) 100%), url('/static/images/bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+        }
+        
+        .content-panel {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        /* Estilo para los enlaces de navegación */
+        .nav-link {
+            position: relative;
+            color: white;
+            opacity: 0.8;
+            padding: 0 1rem;
+            transition: opacity 0.2s;
+        }
+        
+        .nav-link:hover {
+            opacity: 1;
+        }
+        
+        .nav-link.active {
+            opacity: 1;
+        }
+        
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            background-color: white;
+            border-radius: 2px;
+        }
+        
+        .contact-button {
+            background-color: white;
+            color: #4338ca;
+            font-weight: 600;
+            padding: 12px 32px;
+            border-radius: 100px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            margin-top: 20px;
+        }
+        
+        .contact-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .team-member {
+            transition: all 0.3s ease;
+        }
+        
+        .team-member:hover {
+            transform: translateY(-5px);
+        }
+        
+        .team-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 15px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inicio</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosotros</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Sobre <span class="text-purple-200">Nosotros</span></h1>
+            <p class="text-xl text-white opacity-80">Conoce al equipo detrás de Em Sona</p>
+        </div>
+        
+        <div class="content-panel mb-6">
+            <h2 class="text-2xl font-semibold text-white mb-6 tracking-tight">Nuestro Proyecto</h2>
+            
+            <div class="text-white opacity-80 space-y-4">
+                <p>
+                    <strong>Em Sona</strong> es un proyecto universitario desarrollado en el marco del curso de Música y Tecnología en la Universidad de Barcelona, con el objetivo de crear una plataforma que promueva la música catalana y facilite su descubrimiento a nuevas audiencias.
+                </p>
+                
+                <p>
+                    Nuestra aplicación utiliza algoritmos de análisis musical para encontrar similitudes entre canciones, permitiendo a los usuarios descubrir música catalana similar a sus canciones favoritas. Este proyecto combina técnicas de procesamiento de señales de audio, aprendizaje automático y desarrollo web para crear una experiencia de usuario única.
+                </p>
+                
+                <p>
+                    Comenzamos este proyecto en 2023 como parte de nuestro trabajo final de grado y hemos seguido desarrollándolo desde entonces, incorporando nuevas funcionalidades y mejorando la experiencia de usuario.
+                </p>
+                
+                <p>
+                    Nuestro objetivo a largo plazo es convertir Em Sona en una plataforma de referencia para la música catalana, que ayude a artistas emergentes a darse a conocer y proporcione a los oyentes una forma innovadora de descubrir música de nuestra cultura.
+                </p>
+            </div>
+            
+            <div class="mt-10 text-center">
+                <h2 class="text-2xl font-semibold text-white mb-4 tracking-tight">¿Tienes preguntas o sugerencias?</h2>
+                <p class="text-white opacity-80 mb-6">Nos encantaría conocer tu opinión sobre Em Sona</p>
+                
+                <a href="mailto:example@gmail.com" class="contact-button">
+                    Contáctanos
+                </a>
+            </div>
+        </div>
+        
+        <footer class="mt-8 text-center text-xs text-purple-200 pb-6">
+            <p>&copy; 2023 Em Sona - Diseñado para amantes de la música catalana</p>
+        </footer>
+    </div>
+</body>
+</html> 
