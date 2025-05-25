@@ -215,11 +215,40 @@
                 opacity: 0.6;
             }
         }
+        
+        /* Estilo para los enlaces de navegación */
+        .nav-link {
+            position: relative;
+            color: white;
+            opacity: 0.8;
+            padding: 0 1rem;
+            transition: opacity 0.2s;
+        }
+        
+        .nav-link:hover {
+            opacity: 1;
+        }
+        
+        .nav-link.active {
+            opacity: 1;
+        }
+        
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            background-color: white;
+            border-radius: 2px;
+        }
     </style>
     <script>
         // Simulación de carga - en una aplicación real, esto sería reemplazado por una verificación real
         setTimeout(() => {
-            window.location.href = "/results";
+            window.location.href = "/results?video_id={{ video_id }}";
         }, 3000); // Redirige después de 3 segundos
     </script>
 </head>
@@ -228,9 +257,10 @@
         <div class="flex justify-between items-center max-w-7xl mx-auto">
             <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
             <nav>
-                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Inicio</a>
-                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Sobre nosotros</a>
-                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Contacto</a>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inicio</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="#" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosotros</a>
+                <a href="#" class="nav-link {% if pagina_activa == 'contacto' %}active{% endif %}">Contacto</a>
             </nav>
         </div>
     </header>

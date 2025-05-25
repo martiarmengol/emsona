@@ -20,6 +20,7 @@
         
         .song-card {
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .song-card:hover {
@@ -143,6 +144,184 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
         }
+        
+        .video-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .video-container.active {
+            max-height: 315px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .close-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            width: 100%;
+        }
+        
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+        
+        /* Estilos para el modal de valoración */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: rgba(67, 56, 202, 0.9);
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            text-align: center;
+            animation: modalFadeIn 0.3s;
+        }
+        
+        @keyframes modalFadeIn {
+            from {transform: scale(0.8); opacity: 0;}
+            to {transform: scale(1); opacity: 1;}
+        }
+        
+        .rating {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            direction: rtl;
+        }
+        
+        .rating input {
+            display: none;
+        }
+        
+        .rating label {
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            margin: 0 5px;
+            transition: all 0.2s ease;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 36px;
+        }
+        
+        .rating label:hover,
+        .rating label:hover ~ label,
+        .rating input:checked ~ label {
+            color: #FFD700;
+            transform: scale(1.1);
+        }
+        
+        .rating-button {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 100px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .rating-button:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+        
+        .rating-button.rated {
+            background-color: rgba(146, 64, 255, 0.5);
+            cursor: default;
+        }
+        
+        .submit-rating {
+            background-color: white;
+            color: #4338ca;
+            font-weight: 600;
+            padding: 8px 24px;
+            border-radius: 100px;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            display: inline-block;
+            cursor: pointer;
+        }
+        
+        .submit-rating:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Estilo para los enlaces de navegación */
+        .nav-link {
+            position: relative;
+            color: white;
+            opacity: 0.8;
+            padding: 0 1rem;
+            transition: opacity 0.2s;
+        }
+        
+        .nav-link:hover {
+            opacity: 1;
+        }
+        
+        .nav-link.active {
+            opacity: 1;
+        }
+        
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            background-color: white;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -150,9 +329,10 @@
         <div class="flex justify-between items-center max-w-7xl mx-auto">
             <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
             <nav>
-                <a href="/" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Inicio</a>
-                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Sobre nosotros</a>
-                <a href="#" class="text-white opacity-80 hover:opacity-100 transition-opacity px-4">Contacto</a>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inicio</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="#" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosotros</a>
+                <a href="#" class="nav-link {% if pagina_activa == 'contacto' %}active{% endif %}">Contacto</a>
             </nav>
         </div>
     </header>
@@ -173,25 +353,41 @@
             <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Top 5 canciones similares</h2>
             <ul class="divide-y divide-white divide-opacity-10">
                 {% for cancion in canciones %}
-                <li class="py-4 flex items-center song-card" data-index="{{ loop.index0 }}">
-                    <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
-                        {{ loop.index }}
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-medium text-white">{{ cancion.titulo }}</h3>
-                        <p class="text-purple-200">{{ cancion.artista }}</p>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="wave-small">
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
+                <li class="py-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
+                            {{ loop.index }}
                         </div>
-                        <span class="inline-block bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                            {{ cancion.similitud }}
-                        </span>
+                        <div class="flex-1 song-card" data-index="{{ loop.index0 }}">
+                            <h3 class="text-lg font-medium text-white">{{ cancion.titulo }}</h3>
+                            <p class="text-purple-200">{{ cancion.artista }}</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="wave-small">
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                            </div>
+                            <span class="inline-block bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                                {{ cancion.similitud }}
+                            </span>
+                            <button class="rating-button" onclick="openRatingModal({{ loop.index0 }})" id="rating-button-{{ loop.index0 }}">
+                                Valorar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="video-container" id="video-{{ loop.index0 }}">
+                        <div class="video-wrapper">
+                            <iframe width="560" height="315" src="{{ cancion.link }}" title="{{ cancion.titulo }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <div class="close-button" onclick="closeVideo({{ loop.index0 }})">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </li>
                 {% endfor %}
@@ -208,8 +404,142 @@
             <p>&copy; 2023 Em Sona - Diseñado para amantes de la música catalana</p>
         </footer>
     </div>
+
+    <!-- Modal de valoración -->
+    <div id="rating-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-2">Valora esta recomendación</h3>
+            <p class="text-sm opacity-80 mb-4">¿Qué te ha parecido esta recomendación musical?</p>
+            
+            <div class="rating">
+                <input type="radio" name="rating" id="star5" value="5">
+                <label for="star5">★</label>
+                <input type="radio" name="rating" id="star4" value="4">
+                <label for="star4">★</label>
+                <input type="radio" name="rating" id="star3" value="3">
+                <label for="star3">★</label>
+                <input type="radio" name="rating" id="star2" value="2">
+                <label for="star2">★</label>
+                <input type="radio" name="rating" id="star1" value="1">
+                <label for="star1">★</label>
+            </div>
+            
+            <button class="submit-rating" onclick="submitRating()">Enviar valoración</button>
+        </div>
+    </div>
     
     <script>
+        // Variables para la valoración
+        let currentSongIndex = -1;
+        let ratedSongs = {};
+        
+        // Función para abrir el modal de valoración
+        function openRatingModal(index) {
+            if (ratedSongs[index]) {
+                return; // No permitir valorar de nuevo
+            }
+            
+            currentSongIndex = index;
+            document.getElementById('rating-modal').style.display = 'block';
+            
+            // Limpiar selección previa de estrellas
+            const stars = document.querySelectorAll('input[name="rating"]');
+            stars.forEach(star => {
+                star.checked = false;
+            });
+        }
+        
+        // Función para enviar la valoración
+        function submitRating() {
+            const rating = document.querySelector('input[name="rating"]:checked');
+            
+            if (!rating) {
+                alert('Por favor, selecciona una valoración');
+                return;
+            }
+            
+            // Obtener la valoración
+            const valoracion = rating.value;
+            
+            // Obtener el ID del video buscado por el usuario desde la variable pasada por Flask
+            const linkUsuario = "{{ video_id_usuario }}";
+            
+            // Obtener el ID del video recomendado
+            const cancion = document.querySelectorAll('.song-card')[currentSongIndex];
+            const iframe = document.querySelector(`#video-${currentSongIndex} iframe`);
+            const linkRecomendacion = obtenerVideoIdDeIframe(iframe);
+            
+            // Llamar a la función ficticia (a implementar en otro archivo)
+            registrarValoracion(valoracion, linkUsuario, linkRecomendacion);
+            
+            // Marcar la canción como valorada
+            ratedSongs[currentSongIndex] = valoracion;
+            
+            // Actualizar el botón de valoración
+            const ratingButton = document.getElementById(`rating-button-${currentSongIndex}`);
+            ratingButton.textContent = '✓ Valorado';
+            ratingButton.classList.add('rated');
+            
+            // Cerrar modal
+            document.getElementById('rating-modal').style.display = 'none';
+            
+            console.log(`Valoración enviada: ${valoracion} estrellas para canción ${currentSongIndex}`);
+            console.log(`Video usuario: ${linkUsuario}, Video recomendado: ${linkRecomendacion}`);
+        }
+        
+        // Función para extraer el ID de video de YouTube de una URL
+        function obtenerVideoIdDeURL(url) {
+            if (!url) return null;
+            
+            // Intentar extraer el ID del video de diferentes formatos de URL de YouTube
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+        
+        // Función para extraer el ID de video de YouTube de un iframe
+        function obtenerVideoIdDeIframe(iframe) {
+            if (!iframe || !iframe.src) return "video_recomendacion_id";
+            
+            const src = iframe.src;
+            return obtenerVideoIdDeURL(src) || "video_recomendacion_id";
+        }
+        
+        // Función ficticia para registrar la valoración (a implementar en otro archivo)
+        function registrarValoracion(valoracion, linkUsuario, linkRecomendacion) {
+            // Esta función sería implementada en otro archivo
+            // Por ahora solo registramos en la consola
+            console.log(`Llamada a función externa: registrarValoracion(${valoracion}, ${linkUsuario}, ${linkRecomendacion})`);
+            
+            // Aquí se haría una llamada AJAX o fetch a un endpoint del servidor
+            // Ejemplo:
+            /*
+            fetch('/api/valoraciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    valoracion: valoracion,
+                    videoUsuario: linkUsuario,
+                    videoRecomendacion: linkRecomendacion
+                })
+            })
+            .then(response => response.json())
+            .then(data => console.log('Valoración registrada:', data))
+            .catch(error => console.error('Error al registrar valoración:', error));
+            */
+        }
+        
+        // Cerrar el modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('rating-modal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
         // Datos para la visualización t-SNE
         document.addEventListener('DOMContentLoaded', function() {
             // Simulamos coordenadas t-SNE para las canciones
@@ -260,6 +590,15 @@
                     const index = this.dataset.index;
                     const point = document.querySelector(`.tsne-point[data-index="${index}"]`);
                     if (point) point.classList.remove('selected');
+                });
+                
+                // Añadir evento de clic para mostrar/ocultar video
+                card.addEventListener('click', function(e) {
+                    // No activar si se hizo clic en el botón de cerrar
+                    if (e.target.closest('.close-button')) return;
+                    
+                    const index = this.dataset.index;
+                    toggleVideo(index);
                 });
             });
         });
@@ -316,6 +655,27 @@
             connection.style.backgroundColor = `rgba(255, 255, 255, ${opacity})`;
             
             container.appendChild(connection);
+        }
+        
+        // Funciones para manejar los videos
+        function toggleVideo(index) {
+            const videoContainer = document.getElementById(`video-${index}`);
+            const allVideos = document.querySelectorAll('.video-container');
+            
+            // Cerrar todos los videos abiertos excepto el actual
+            allVideos.forEach(container => {
+                if (container.id !== `video-${index}` && container.classList.contains('active')) {
+                    container.classList.remove('active');
+                }
+            });
+            
+            // Alternar el estado del video actual
+            videoContainer.classList.toggle('active');
+        }
+        
+        function closeVideo(index) {
+            const videoContainer = document.getElementById(`video-${index}`);
+            videoContainer.classList.remove('active');
         }
     </script>
 </body>
