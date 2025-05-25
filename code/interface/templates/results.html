@@ -1,213 +1,269 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ca">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recomendaciones - Em Sona</title>
+    <title>Recomanacions - Em Sona</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.9) 100%), url('/static/images/bg.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        
-        .song-card {
-            transition: all 0.3s ease;
-        }
-        
-        .song-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .wave-small {
-            display: flex;
-            align-items: center;
-            height: 20px;
-        }
-        
-        .wave-bar-small {
-            width: 2px;
-            height: 100%;
-            background-color: #fff;
-            margin: 0 1px;
-            border-radius: 1px;
-            opacity: 0.7;
-            animation: wave-small 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes wave-small {
-            0%, 100% {
-                height: 5px;
-            }
-            50% {
-                height: 15px;
-            }
-        }
-        
-        .wave-bar-small:nth-child(1) { animation-delay: 0.1s; }
-        .wave-bar-small:nth-child(2) { animation-delay: 0.2s; }
-        .wave-bar-small:nth-child(3) { animation-delay: 0.3s; }
-        .wave-bar-small:nth-child(4) { animation-delay: 0.2s; }
-        .wave-bar-small:nth-child(5) { animation-delay: 0.1s; }
-        
-        #tsne-container {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .tsne-point {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.6);
-            transform: translate(-50%, -50%);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .tsne-point.selected {
-            width: 16px;
-            height: 16px;
-            background-color: #ffffff;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
-            z-index: 10;
-        }
-        
-        .tsne-point:hover {
-            transform: translate(-50%, -50%) scale(1.5);
-        }
-        
-        .tsne-label {
-            position: absolute;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            transform: translate(-50%, -100%);
-            margin-top: -8px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        
-        .tsne-point:hover + .tsne-label {
-            opacity: 1;
-        }
-        
-        .tsne-connection {
-            position: absolute;
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.3);
-            transform-origin: 0 0;
-            pointer-events: none;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body class="min-h-screen py-10 px-4">
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
-            <p class="text-purple-200">Tus recomendaciones de música catalana</p>
-        </header>
-        
-        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 mb-8 border border-white border-opacity-20">
-            <h2 class="text-xl font-semibold text-white mb-6 tracking-tight">Mapa de similitud musical</h2>
-            <div id="tsne-container" class="mb-4"></div>
-            <p class="text-xs text-purple-200 text-center mt-2">Las canciones más cercanas entre sí tienen características musicales similares</p>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-xl text-white opacity-80">Les teves recomanacions de música catalana</p>
         </div>
         
-        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 border border-white border-opacity-20">
-            <h2 class="text-xl font-semibold text-white mb-6 tracking-tight">Top 5 canciones similares</h2>
+        <div class="content-panel mb-6">
+            <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Mapa de similitud musical</h2>
+            <div id="tsne-container" class="mb-3"></div>
+            <p class="text-xs text-purple-200 text-center mt-2">Les cançons més properes entre si tenen característiques musicals similars</p>
+        </div>
+        
+        <div class="content-panel">
+            <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Top 5 cançons similars</h2>
             <ul class="divide-y divide-white divide-opacity-10">
                 {% for cancion in canciones %}
-                <li class="py-5 flex items-center song-card" data-index="{{ loop.index0 }}">
-                    <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
-                        {{ loop.index }}
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-medium text-white">{{ cancion.titulo }}</h3>
-                        <p class="text-purple-200">{{ cancion.artista }}</p>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="wave-small">
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
-                            <div class="wave-bar-small"></div>
+                <li class="py-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
+                            {{ loop.index }}
                         </div>
-                        <span class="inline-block bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                            {{ cancion.similitud }}
-                        </span>
+                        <div class="flex-1 song-card" data-index="{{ loop.index0 }}">
+                            <h3 class="text-lg font-medium text-white">{{ cancion.titulo }}</h3>
+                            <p class="text-purple-200">{{ cancion.artista }}</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="wave-small">
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                            </div>
+                            <span class="inline-block bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                                {{ cancion.similitud }}
+                            </span>
+                            <button class="rating-button" onclick="openRatingModal({{ loop.index0 }})" id="rating-button-{{ loop.index0 }}">
+                                Valorar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="video-container" id="video-{{ loop.index0 }}">
+                        <div class="video-wrapper">
+                            <iframe width="560" height="315" src="{{ cancion.link }}" title="{{ cancion.titulo }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <div class="close-button" onclick="closeVideo({{ loop.index0 }})">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </li>
                 {% endfor %}
             </ul>
             
-            <div class="mt-10 text-center">
-                <a href="/" class="inline-block bg-white text-indigo-700 font-medium py-3 px-8 rounded-md transition duration-300 transform hover:-translate-y-1 hover:shadow-lg">
-                    BUSCAR OTRA CANCIÓN
+            <div class="mt-8 text-center">
+                <a href="/" class="search-button">
+                    CERCAR UNA ALTRA CANÇÓ
                 </a>
             </div>
         </div>
         
-        <footer class="mt-12 text-center text-xs text-purple-200">
-            <p>Diseñado para amantes de la música catalana</p>
+        <footer class="mt-8 text-center text-xs text-purple-200 pb-6">
+            <p>&copy; 2025 Em Sona - Dissenyat per a amants de la música catalana</p>
         </footer>
+    </div>
+
+    <!-- Modal de valoració -->
+    <div id="rating-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-2">Valora aquesta recomanació</h3>
+            <p class="text-sm opacity-80 mb-4">Què t'ha semblat aquesta recomanació musical?</p>
+            
+            <div class="rating">
+                <input type="radio" name="rating" id="star5" value="5">
+                <label for="star5">★</label>
+                <input type="radio" name="rating" id="star4" value="4">
+                <label for="star4">★</label>
+                <input type="radio" name="rating" id="star3" value="3">
+                <label for="star3">★</label>
+                <input type="radio" name="rating" id="star2" value="2">
+                <label for="star2">★</label>
+                <input type="radio" name="rating" id="star1" value="1">
+                <label for="star1">★</label>
+            </div>
+            
+            <button class="submit-rating" onclick="submitRating()">Enviar valoració</button>
+        </div>
     </div>
     
     <script>
-        // Datos para la visualización t-SNE
+        // Variables per a la valoració
+        let currentSongIndex = -1;
+        let ratedSongs = {};
+        
+        // Funció per obrir el modal de valoració
+        function openRatingModal(index) {
+            if (ratedSongs[index]) {
+                return; // No permetre valorar de nou
+            }
+            
+            currentSongIndex = index;
+            document.getElementById('rating-modal').style.display = 'block';
+            
+            // Netejar selecció prèvia d'estrelles
+            const stars = document.querySelectorAll('input[name="rating"]');
+            stars.forEach(star => {
+                star.checked = false;
+            });
+        }
+        
+        // Funció per enviar la valoració
+        function submitRating() {
+            const rating = document.querySelector('input[name="rating"]:checked');
+            
+            if (!rating) {
+                alert('Si us plau, selecciona una valoració');
+                return;
+            }
+            
+            // Obtenir la valoració
+            const valoracion = rating.value;
+            
+            // Obtenir l'ID del vídeo buscat per l'usuari des de la variable passada per Flask
+            const linkUsuario = "{{ video_id_usuario }}";
+            
+            // Obtenir l'ID del vídeo recomanat
+            const cancion = document.querySelectorAll('.song-card')[currentSongIndex];
+            const iframe = document.querySelector(`#video-${currentSongIndex} iframe`);
+            const linkRecomendacion = obtenerVideoIdDeIframe(iframe);
+            
+            // Cridar a la funció fictícia (a implementar en un altre arxiu)
+            registrarValoracion(valoracion, linkUsuario, linkRecomendacion);
+            
+            // Marcar la cançó com a valorada
+            ratedSongs[currentSongIndex] = valoracion;
+            
+            // Actualitzar el botó de valoració
+            const ratingButton = document.getElementById(`rating-button-${currentSongIndex}`);
+            ratingButton.textContent = '✓ Valorada';
+            ratingButton.classList.add('rated');
+            
+            // Tancar modal
+            document.getElementById('rating-modal').style.display = 'none';
+            
+            console.log(`Valoració enviada: ${valoracion} estrelles per a cançó ${currentSongIndex}`);
+            console.log(`Vídeo usuari: ${linkUsuario}, Vídeo recomanat: ${linkRecomendacion}`);
+        }
+        
+        // Funció per extreure l'ID de vídeo de YouTube d'una URL
+        function obtenerVideoIdDeURL(url) {
+            if (!url) return null;
+            
+            // Intentar extreure l'ID del vídeo de diferents formats d'URL de YouTube
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+        
+        // Funció per extreure l'ID de vídeo de YouTube d'un iframe
+        function obtenerVideoIdDeIframe(iframe) {
+            if (!iframe || !iframe.src) return "video_recomendacion_id";
+            
+            const src = iframe.src;
+            return obtenerVideoIdDeURL(src) || "video_recomendacion_id";
+        }
+        
+        // Funció fictícia per registrar la valoració (a implementar en un altre arxiu)
+        function registrarValoracion(valoracion, linkUsuario, linkRecomendacion) {
+            // Aquesta funció seria implementada en un altre arxiu
+            // Per ara només registrem a la consola
+            console.log(`Crida a funció externa: registrarValoracion(${valoracion}, ${linkUsuario}, ${linkRecomendacion})`);
+            
+            // Aquí es faria una crida AJAX o fetch a un endpoint del servidor
+            // Exemple:
+            /*
+            fetch('/api/valoraciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    valoracion: valoracion,
+                    videoUsuario: linkUsuario,
+                    videoRecomendacion: linkRecomendacion
+                })
+            })
+            .then(response => response.json())
+            .then(data => console.log('Valoració registrada:', data))
+            .catch(error => console.error('Error al registrar valoració:', error));
+            */
+        }
+        
+        // Tancar el modal en fer clic fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('rating-modal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Dades per a la visualització t-SNE
         document.addEventListener('DOMContentLoaded', function() {
-            // Simulamos coordenadas t-SNE para las canciones
+            // Simulem coordenades t-SNE per a les cançons
             const canciones = [
                 {% for cancion in canciones %}
                 {
-                    titulo: "{{ cancion.titulo }}",
-                    artista: "{{ cancion.artista }}",
-                    similitud: "{{ cancion.similitud }}",
-                    x: Math.random() * 80 + 10, // Posición X aleatoria entre 10% y 90%
-                    y: Math.random() * 80 + 10  // Posición Y aleatoria entre 10% y 90%
+                    "titulo": "{{ cancion.titulo }}",
+                    "artista": "{{ cancion.artista }}",
+                    "similitud": "{{ cancion.similitud }}",
+                    "x": Math.random() * 80 + 10,
+                    "y": Math.random() * 80 + 10
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ];
             
-            // Añadimos un punto para la canción de consulta en el centro
+            // Afegim un punt per a la cançó de consulta al centre
             const cancionConsulta = {
-                titulo: "Tu canción",
-                artista: "Canción de referencia",
-                similitud: "100%",
-                x: 50,
-                y: 50
+                "titulo": "La teva cançó",
+                "artista": "Cançó de referència",
+                "similitud": "100%",
+                "x": 50,
+                "y": 50
             };
             
             const container = document.getElementById('tsne-container');
             
-            // Crear punto para la canción de consulta
+            // Crear punt per a la cançó de consulta
             createPoint(cancionConsulta, container, true);
             
-            // Crear puntos para las canciones similares
+            // Crear punts per a les cançons similars
             canciones.forEach((cancion, index) => {
                 const point = createPoint(cancion, container, false);
                 point.dataset.index = index;
                 
-                // Crear conexión entre la canción de consulta y cada canción similar
+                // Crear connexió entre la cançó de consulta i cada cançó similar
                 createConnection(cancionConsulta, cancion, container);
             });
             
-            // Resaltar canción al hacer hover en la lista
+            // Ressaltar cançó en fer hover a la llista
             document.querySelectorAll('.song-card').forEach(card => {
                 card.addEventListener('mouseenter', function() {
                     const index = this.dataset.index;
@@ -220,11 +276,20 @@
                     const point = document.querySelector(`.tsne-point[data-index="${index}"]`);
                     if (point) point.classList.remove('selected');
                 });
+                
+                // Afegir esdeveniment de clic per mostrar/ocultar vídeo
+                card.addEventListener('click', function(e) {
+                    // No activar si es va fer clic al botó de tancar
+                    if (e.target.closest('.close-button')) return;
+                    
+                    const index = this.dataset.index;
+                    toggleVideo(index);
+                });
             });
         });
         
         function createPoint(cancion, container, isReference) {
-            // Crear el punto
+            // Crear el punt
             const point = document.createElement('div');
             point.className = 'tsne-point';
             if (isReference) {
@@ -235,7 +300,7 @@
                 point.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.8)';
                 point.style.zIndex = '20';
             } else {
-                // Color basado en la similitud (de blanco a morado)
+                // Color basat en la similitud (de blanc a morat)
                 const similitud = parseInt(cancion.similitud.replace('%', ''));
                 const opacity = similitud / 100;
                 point.style.backgroundColor = `rgba(255, 255, 255, ${opacity})`;
@@ -245,7 +310,7 @@
             point.style.top = `${cancion.y}%`;
             container.appendChild(point);
             
-            // Crear la etiqueta
+            // Crear l'etiqueta
             const label = document.createElement('div');
             label.className = 'tsne-label';
             label.textContent = `${cancion.titulo} - ${cancion.artista}`;
@@ -269,12 +334,33 @@
             connection.style.top = `${source.y}%`;
             connection.style.transform = `rotate(${angle}deg)`;
             
-            // Opacidad basada en la similitud
+            // Opacitat basada en la similitud
             const similitud = parseInt(target.similitud.replace('%', ''));
-            const opacity = similitud / 200; // Más transparente
+            const opacity = similitud / 200; // Més transparent
             connection.style.backgroundColor = `rgba(255, 255, 255, ${opacity})`;
             
             container.appendChild(connection);
+        }
+        
+        // Funcions per gestionar els vídeos
+        function toggleVideo(index) {
+            const videoContainer = document.getElementById(`video-${index}`);
+            const allVideos = document.querySelectorAll('.video-container');
+            
+            // Tancar tots els vídeos oberts excepte l'actual
+            allVideos.forEach(container => {
+                if (container.id !== `video-${index}` && container.classList.contains('active')) {
+                    container.classList.remove('active');
+                }
+            });
+            
+            // Alternar l'estat del vídeo actual
+            videoContainer.classList.toggle('active');
+        }
+        
+        function closeVideo(index) {
+            const videoContainer = document.getElementById(`video-${index}`);
+            videoContainer.classList.remove('active');
         }
     </script>
 </body>

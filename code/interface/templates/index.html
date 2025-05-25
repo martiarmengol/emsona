@@ -1,127 +1,30 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ca">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Em Sona - Recomendador de Música Catalana</title>
+    <title>Em Sona - Recomanador de Música Catalana</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(67, 56, 202, 0.0) 100%), url('/static/images/bg.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        .wave-animation {
-            position: relative;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 30px 0;
-        }
-        .wave-bar {
-            width: 4px;
-            height: 100%;
-            background-color: #fff;
-            margin: 0 2px;
-            border-radius: 3px;
-            animation: wave 1.5s ease-in-out infinite;
-            opacity: 0.7;
-        }
-        @keyframes wave {
-            0%, 100% {
-                height: 10px;
-            }
-            50% {
-                height: 40px;
-            }
-        }
-        .wave-bar:nth-child(1) { animation-delay: 0.1s; }
-        .wave-bar:nth-child(2) { animation-delay: 0.2s; }
-        .wave-bar:nth-child(3) { animation-delay: 0.3s; }
-        .wave-bar:nth-child(4) { animation-delay: 0.4s; }
-        .wave-bar:nth-child(5) { animation-delay: 0.5s; }
-        .wave-bar:nth-child(6) { animation-delay: 0.4s; }
-        .wave-bar:nth-child(7) { animation-delay: 0.3s; }
-        .wave-bar:nth-child(8) { animation-delay: 0.2s; }
-        .wave-bar:nth-child(9) { animation-delay: 0.1s; }
-        
-        .album-cover {
-            position: relative;
-            width: 220px;
-            height: 220px;
-            margin: 0 auto;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-            margin-bottom: 30px;
-        }
-        .album-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .album-cover::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);
-        }
-        .music-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
-        }
-        .control-button {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 10px;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            transition: all 0.2s;
-        }
-        .search-button {
-            width: auto;
-            height: auto;
-            border-radius: 12px;
-            padding: 12px 24px;
-            background-color: white;
-            color: #4338ca;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-        .search-button svg {
-            margin-right: 8px;
-        }
-        .search-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 20px -3px rgba(0, 0, 0, 0.2);
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-white bg-opacity-10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden p-8 border border-white border-opacity-20">
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="search-container">
         <div class="text-center">
-            <h1 class="text-4xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
-            <p class="text-purple-200 mb-8 text-sm">Descubre música catalana similar a tus canciones favoritas</p>
-        
+            <h1 class="text-6xl font-bold text-white mb-4 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-xl text-white opacity-80 mb-8">Descobreix música catalana similar a les teves cançons favorites</p>
             
             <div class="wave-animation">
                 <div class="wave-bar"></div>
@@ -135,52 +38,42 @@
                 <div class="wave-bar"></div>
             </div>
             
-            <form action="/loading" method="POST" class="space-y-6">
-                <div>
-                    <label for="youtube_url" class="block text-sm font-medium text-white mb-2 uppercase tracking-wide">Enlace de YouTube</label>
+            <form action="/loading" method="POST" class="mt-8">
+                <div class="search-box">
+                    <div class="search-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
                     <input type="url" id="youtube_url" name="youtube_url" required 
-                           class="w-full px-4 py-3 bg-white bg-opacity-10 border-b-2 border-purple-300 focus:border-white focus:outline-none transition-colors rounded-lg text-white placeholder-purple-200" 
-                           placeholder="https://www.youtube.com/watch?v=...">
+                           class="search-input" 
+                           placeholder="Enganxa l'enllaç de YouTube aquí...">
                 </div>
                 
-                <button type="submit" class="search-button w-full transition duration-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    Buscar recomendaciones
-                </button>
+                <div class="text-center mt-6">
+                    <button type="submit" class="search-button">
+                        Cercar recomanacions
+                    </button>
+                </div>
             </form>
             
-            <div class="music-controls mt-8">
-                <div class="control-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </div>
-                <div class="control-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <div class="control-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </div>
+            <div class="genre-tags">
+                <span class="genre-tag">Pop Català</span>
+                <span class="genre-tag">Rock</span>
+                <span class="genre-tag">Folk</span>
+                <span class="genre-tag">Electrònica</span>
+                <span class="genre-tag">Indie</span>
+                <span class="genre-tag">Rumba Catalana</span>
+                <span class="genre-tag">Trap</span>
             </div>
-            
-            <div class="mt-6 text-center">
-                <div class="flex justify-between text-xs text-white opacity-70">
-                    <span>0:00</span>
-                    <span>4:30</span>
-                </div>
-                <div class="mt-2 h-1 w-full bg-white bg-opacity-20 rounded-full overflow-hidden">
-                    <div class="h-full w-1/3 bg-white rounded-full"></div>
-                </div>
-            </div>
-            
-            <p class="text-xs text-purple-200 mt-8">Géneros: Pop Catalán · Rock · Folk · Electrónica · Indie</p>
         </div>
     </div>
+    
+    <footer class="footer">
+        <div class="footer-left">
+            &copy; 2025 Em Sona - Tots els drets reservats
+        </div>
+
+    </footer>
 </body>
 </html> 
