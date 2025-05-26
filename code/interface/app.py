@@ -44,7 +44,7 @@ def obtener_video_id(url):
 def leer_canciones_csv():
     canciones = []
     try:
-        csv_path = os.path.join(app.static_folder, 'csv', 'songs.csv')
+        csv_path = os.path.join(app.static_folder, 'csv', 'catalan_music_metadata.csv')
         with open(csv_path, 'r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file)
             for row in csv_reader:
@@ -99,9 +99,9 @@ def library():
     if query:
         canciones_filtradas = [
             cancion for cancion in todas_canciones 
-            if query in cancion['Song Name'].lower() or 
-               query in cancion['Band'].lower() or 
-               query in cancion['Genre'].lower()
+            if query in cancion['song_title'].lower() or 
+               query in cancion['channel_name'].lower() or 
+               query in cancion['original_title'].lower()
         ]
     else:
         canciones_filtradas = todas_canciones
