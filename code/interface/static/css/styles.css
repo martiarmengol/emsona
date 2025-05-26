@@ -775,4 +775,82 @@ body {
 .youtube-link:hover {
     transform: scale(1.1);
     color: #ff0000;
+}
+
+/* Estilos para el nuevo modal de valoración con botones */
+.rating-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 1rem;
+    text-align: center;
+}
+
+.rating-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.rating-btn {
+    background: transparent;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s, filter 0.2s;
+    margin: 0 0.5rem;
+    position: relative;
+    opacity: 0.7;
+}
+
+.rating-btn:hover {
+    transform: scale(1.2);
+    opacity: 1;
+}
+
+.rating-btn.selected {
+    transform: scale(1.3);
+    opacity: 1;
+    text-shadow: 0 0 15px rgba(167, 139, 250, 0.8);
+    filter: drop-shadow(0 0 5px rgba(167, 139, 250, 0.6));
+}
+
+.rating-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    width: 8px;
+    height: 8px;
+    background-color: #a78bfa;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.rating-btn.selected::after {
+    transform: translateX(-50%) scale(1);
+}
+
+.rating-question {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.rating-options {
+    display: flex;
+    justify-content: space-around;
+    margin: 1.5rem 0;
+}
+
+.submit-rating {
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.submit-rating.active {
+    opacity: 1;
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
 } 

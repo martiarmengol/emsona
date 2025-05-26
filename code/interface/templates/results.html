@@ -93,20 +93,22 @@
     <!-- Modal de valoració -->
     <div id="rating-modal" class="modal">
         <div class="modal-content">
-            <h3 class="text-xl font-bold mb-2">Valora aquesta recomanació</h3>
-            <p class="text-sm opacity-80 mb-4">Què t'ha semblat aquesta recomanació musical?</p>
-            
-            <div class="rating">
-                <input type="radio" name="rating" id="star5" value="5">
-                <label for="star5">★</label>
-                <input type="radio" name="rating" id="star4" value="4">
-                <label for="star4">★</label>
-                <input type="radio" name="rating" id="star3" value="3">
-                <label for="star3">★</label>
-                <input type="radio" name="rating" id="star2" value="2">
-                <label for="star2">★</label>
-                <input type="radio" name="rating" id="star1" value="1">
-                <label for="star1">★</label>
+            <div class="rating-options">
+                <div class="rating-option">
+                    <p class="rating-question">T'ha agradat la cançó?</p>
+                    <div class="rating-buttons">
+                        <button class="rating-btn heart-btn" data-value="1" onclick="selectRating('song', 1)">❤️</button>
+                        <button class="rating-btn heart-btn" data-value="0" onclick="selectRating('song', 0)">💔</button>
+                    </div>
+                </div>
+                
+                <div class="rating-option">
+                    <p class="rating-question">T'ha agradat la recomanació?</p>
+                    <div class="rating-buttons">
+                        <button class="rating-btn thumb-btn" data-value="1" onclick="selectRating('recommendation', 1)">👍</button>
+                        <button class="rating-btn thumb-btn" data-value="0" onclick="selectRating('recommendation', 0)">👎</button>
+                    </div>
+                </div>
             </div>
             
             <button class="submit-rating" onclick="submitRating()">Enviar valoració</button>
@@ -117,6 +119,10 @@
         // Variables per a la valoració
         let currentSongIndex = -1;
         let ratedSongs = {};
+        let currentRating = {
+            song: null,
+            recommendation: null
+        };
         
         // Funció per obrir el modal de valoració
         function openRatingModal(index) {
@@ -127,24 +133,59 @@
             currentSongIndex = index;
             document.getElementById('rating-modal').style.display = 'block';
             
-            // Netejar selecció prèvia d'estrelles
-            const stars = document.querySelectorAll('input[name="rating"]');
-            stars.forEach(star => {
-                star.checked = false;
+            // Netejar selecció prèvia
+            resetRatingSelection();
+        }
+        
+        // Funció per seleccionar una valoració
+        function selectRating(type, value) {
+            // Guardar la valoració
+            currentRating[type] = value;
+            
+            // Actualitzar visualment els botons
+            const buttons = document.querySelectorAll(type === 'song' ? '.heart-btn' : '.thumb-btn');
+            buttons.forEach(btn => {
+                if (parseInt(btn.dataset.value) === value) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
             });
+            
+            // Actualitzar el botó d'enviar si ambdues opcions estan seleccionades
+            updateSubmitButton();
+        }
+        
+        // Funció per actualitzar l'estat del botó d'enviar
+        function updateSubmitButton() {
+            const submitButton = document.querySelector('.submit-rating');
+            
+            if (currentRating.song !== null && currentRating.recommendation !== null) {
+                submitButton.classList.add('active');
+            } else {
+                submitButton.classList.remove('active');
+            }
+        }
+        
+        // Funció per netejar la selecció
+        function resetRatingSelection() {
+            currentRating.song = null;
+            currentRating.recommendation = null;
+            
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateSubmitButton();
         }
         
         // Funció per enviar la valoració
         function submitRating() {
-            const rating = document.querySelector('input[name="rating"]:checked');
-            
-            if (!rating) {
-                alert('Si us plau, selecciona una valoració');
+            // Verificar que s'han seleccionat ambdues valoracions
+            if (currentRating.song === null || currentRating.recommendation === null) {
+                alert('Si us plau, valora tant la cançó com la recomanació');
                 return;
             }
-            
-            // Obtenir la valoració
-            const valoracion = rating.value;
             
             // Obtenir l'ID del vídeo buscat per l'usuari des de la variable passada per Flask
             const linkUsuario = "{{ video_id_usuario }}";
@@ -154,21 +195,28 @@
             const iframe = document.querySelector(`#video-${currentSongIndex} iframe`);
             const linkRecomendacion = obtenerVideoIdDeIframe(iframe);
             
-            // Cridar a la funció fictícia (a implementar en un altre arxiu)
-            registrarValoracion(valoracion, linkUsuario, linkRecomendacion);
+            // Cridar a la funció amb els nous paràmetres
+            registrarValoracion(linkUsuario, linkRecomendacion, currentRating.song, currentRating.recommendation);
             
             // Marcar la cançó com a valorada
-            ratedSongs[currentSongIndex] = valoracion;
+            ratedSongs[currentSongIndex] = {
+                song: currentRating.song,
+                recommendation: currentRating.recommendation
+            };
             
             // Actualitzar el botó de valoració
             const ratingButton = document.getElementById(`rating-button-${currentSongIndex}`);
-            ratingButton.textContent = '✓ Valorada';
+            
+            // Mostrar icones segons la valoració
+            let songIcon = currentRating.song === 1 ? "❤️" : "💔";
+            let recoIcon = currentRating.recommendation === 1 ? "👍" : "👎";
+            ratingButton.innerHTML = `${songIcon} ${recoIcon}`;
             ratingButton.classList.add('rated');
             
             // Tancar modal
             document.getElementById('rating-modal').style.display = 'none';
             
-            console.log(`Valoració enviada: ${valoracion} estrelles per a cançó ${currentSongIndex}`);
+            console.log(`Valoració enviada: Cançó: ${currentRating.song}, Recomanació: ${currentRating.recommendation}`);
             console.log(`Vídeo usuari: ${linkUsuario}, Vídeo recomanat: ${linkRecomendacion}`);
         }
         
@@ -191,11 +239,11 @@
             return obtenerVideoIdDeURL(src) || "video_recomendacion_id";
         }
         
-        // Funció fictícia per registrar la valoració (a implementar en un altre arxiu)
-        function registrarValoracion(valoracion, linkUsuario, linkRecomendacion) {
+        // Funció per registrar la valoració amb el nou format
+        function registrarValoracion(linkUsuario, linkRecomendacion, valorCancion, valorRecomendacion) {
             // Aquesta funció seria implementada en un altre arxiu
             // Per ara només registrem a la consola
-            console.log(`Crida a funció externa: registrarValoracion(${valoracion}, ${linkUsuario}, ${linkRecomendacion})`);
+            console.log(`Crida a funció externa: registrarValoracion(${linkUsuario}, ${linkRecomendacion}, ${valorCancion}, ${valorRecomendacion})`);
             
             // Aquí es faria una crida AJAX o fetch a un endpoint del servidor
             // Exemple:
@@ -206,9 +254,10 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    valoracion: valoracion,
                     videoUsuario: linkUsuario,
-                    videoRecomendacion: linkRecomendacion
+                    videoRecomendacion: linkRecomendacion,
+                    valorCancion: valorCancion,
+                    valorRecomendacion: valorRecomendacion
                 })
             })
             .then(response => response.json())
