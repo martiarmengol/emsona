@@ -697,7 +697,7 @@ if __name__ == "__main__":
 
 #--------------------------------------------------------------------------------------------
 
-    # --- PARAMETERS TO EDIT ---
+    # --- PARAMETERS TO EDIT ---    
     song_path = "/home/guillem/Pictures/Song"
     embedding_path = "/home/guillem/Pictures/Embedding" 
     model_path = "/home/guillem/Downloads/discogs_artist_embeddings-effnet-bs64-1.pb"
@@ -713,5 +713,6 @@ if __name__ == "__main__":
     # --- Run the recomendator ---
     top_recs = recomendator_with_faiss(song_path, song_url, embedding_path, model_path, metadata_path, store_metadata_path, song_embeddings, k, n)
     print("Top recommendations:", top_recs)
+    
     # --- END RUN ---
     #top_recs.to_csv("/home/guillem/Downloads/top_recommendations.csv", index=False)
