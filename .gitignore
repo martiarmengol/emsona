@@ -28,3 +28,11 @@ Interface/backend/venv
 code/song_embeddings
 code/visualization_results
 code/visualization_maest_results
+
+#interface with recomender
+code/interface_local/recommendator/app/EMBEDDINGS
+code/interface_local/recommendator/app/MODEL
+code/interface_local/recommendator/app/store_embedding
+code/interface_local/recommendator/app/store_metadata
+code/interface_local/recommendator/app/store_song
+code/interface_local/recommendator/app/SVG

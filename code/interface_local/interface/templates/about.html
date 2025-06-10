@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sobre Nosaltres - Em Sona</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Sobre <span class="text-purple-200">Nosaltres</span></h1>
+            <p class="text-xl text-white opacity-80">Coneix l'equip darrere d'Em Sona</p>
+        </div>
+        
+        <div class="content-panel mb-6">
+            <h2 class="text-2xl font-semibold text-white mb-6 tracking-tight">El Nostre Projecte</h2>
+            
+            <div class="text-white opacity-80 space-y-4">
+                <p>
+                    <strong>Em Sona</strong> és un projecte universitari desenvolupat en el marc del curs de Música i Tecnologia a la Universitat Pompeu Fabra (UPF), amb l'objectiu de crear una plataforma que promogui la música catalana i faciliti el seu descobriment a noves audiències.
+                </p>
+                
+                <p>
+                    La nostra aplicació utilitza algoritmes d'anàlisi musical per trobar similituds entre cançons, permetent als usuaris descobrir música catalana similar a les seves cançons favorites. Aquest projecte combina tècniques de processament de senyals d'àudio, aprenentatge automàtic i desenvolupament web per crear una experiència d'usuari única.
+                </p>
+                
+                <p>
+                    Vam començar aquest projecte el 2025 com a part del nostre treball de Taller de Tecnologia Músical i hem continuat desenvolupant-lo des d'aleshores, incorporant noves funcionalitats i millorant l'experiència d'usuari.
+                </p>
+                
+                <p>
+                    El nostre objectiu a llarg termini és convertir Em Sona en una plataforma de referència per a la música catalana, que ajudi artistes emergents a donar-se a conèixer i proporcioni als oients una forma innovadora de descobrir música de la nostra cultura.
+                </p>
+            </div>
+            
+            <div class="mt-10 text-center">
+                <h2 class="text-2xl font-semibold text-white mb-4 tracking-tight">Tens preguntes o suggeriments?</h2>
+                <p class="text-white opacity-80 mb-6">Ens encantaria conèixer la teva opinió sobre Em Sona</p>
+                
+                <a href="mailto:example@gmail.com" class="contact-button">
+                    Contacta'ns
+                </a>
+            </div>
+        </div>
+        
+        <footer class="mt-8 text-center text-xs text-purple-200 pb-6">
+            <p>&copy; 2025 Em Sona - Dissenyat per a amants de la música catalana</p>
+        </footer>
+    </div>
+</body>
+</html> 

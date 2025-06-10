@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Em Sona - Recomanador de Música Catalana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="search-container">
+        <div class="text-center">
+            <h1 class="text-6xl font-bold text-white mb-4 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-xl text-white opacity-80 mb-8">Descobreix música catalana similar a les teves cançons favorites</p>
+            
+            <div class="wave-animation">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+            
+            <!-- ✅ Mostrar mensaje de error si existe -->
+            {% if error_message %}
+            <div class="error-message">
+                <div class="error-icon">⚠️</div>
+                <p>{{ error_message }}</p>
+            </div>
+            {% endif %}
+            
+            <form action="/loading" method="POST" class="mt-8">
+                <div class="search-box">
+                    <div class="search-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="url" id="youtube_url" name="youtube_url" required 
+                           class="search-input" 
+                           placeholder="Enganxa l'enllaç de YouTube aquí...">
+                </div>
+                
+                <div class="text-center mt-6">
+                    <button type="submit" class="search-button">
+                        Cercar recomanacions
+                    </button>
+                </div>
+            </form>
+            
+            <div class="genre-tags">
+                <span class="genre-tag">Pop Català</span>
+                <span class="genre-tag">Rock</span>
+                <span class="genre-tag">Folk</span>
+                <span class="genre-tag">Electrònica</span>
+                <span class="genre-tag">Indie</span>
+                <span class="genre-tag">Rumba Catalana</span>
+                <span class="genre-tag">Trap</span>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="footer-left">
+            &copy; 2025 Em Sona - Tots els drets reservats
+        </div>
+
+    </footer>
+</body>
+</html> 

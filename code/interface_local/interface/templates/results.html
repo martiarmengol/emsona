@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomanacions - Em Sona</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script>
+        // ✅ Definir variables desde el backend
+        window.coordinatesData = {{ coordinates|tojson|safe }};
+        window.cancionesData = [
+            {% for cancion in canciones %}
+            {
+                "titulo": {{ cancion.titulo|tojson|safe }},
+                "artista": {{ cancion.artista|tojson|safe }},
+                "similitud": {{ cancion.similitud|tojson|safe }},
+                "link": {{ cancion.link|tojson|safe }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+    </script>
+</head>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-xl text-white opacity-80">Les teves recomanacions de música catalana</p>
+        </div>
+        
+        <div class="content-panel mb-6">
+            <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Mapa de similitud musical</h2>
+            <div id="tsne-container" class="mb-3"></div>
+            
+            <!-- Leyenda de colores -->
+            <div class="flex justify-center items-center space-x-6 mt-3 mb-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full" style="background-color: rgb(150, 200, 255); opacity: 0.7;"></div>
+                    <span class="text-xs text-purple-200">Baixa similitud</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full" style="background-color: rgb(110, 150, 255);"></div>
+                    <span class="text-xs text-purple-200">Similitud mitjana</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-4 h-4 rounded-full" style="background-color: rgb(70, 100, 255); box-shadow: 0 0 8px rgba(70, 100, 255, 0.8);"></div>
+                    <span class="text-xs text-purple-200">Alta similitud</span>
+                </div>
+            </div>
+            
+            <p class="text-xs text-purple-200 text-center mt-2">Fes clic als punts per obrir el vídeo a YouTube</p>
+        </div>
+        
+        <div class="content-panel">
+            <h2 class="text-xl font-semibold text-white mb-4 tracking-tight">Top 5 cançons similars</h2>
+            <ul class="divide-y divide-white divide-opacity-10">
+                {% for cancion in canciones %}
+                <li class="py-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center font-bold mr-5">
+                            {{ loop.index }}
+                        </div>
+                        <div class="flex-1 song-card" data-index="{{ loop.index0 }}">
+                            <h3 class="text-lg font-medium text-white">{{ cancion.titulo }}</h3>
+                            <p class="text-purple-200">{{ cancion.artista }}</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="wave-small">
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                                <div class="wave-bar-small"></div>
+                            </div>
+                            <span class="inline-block bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                                {{ cancion.similitud }}
+                            </span>
+                            <button class="rating-button" onclick="openRatingModal({{ loop.index0 }})" id="rating-button-{{ loop.index0 }}">
+                                Valorar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="video-container" id="video-{{ loop.index0 }}">
+                        <div class="video-wrapper">
+                            <iframe width="560" height="315" src="{{ cancion.link }}" title="{{ cancion.titulo }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <div class="close-button" onclick="closeVideo({{ loop.index0 }})">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            
+            <div class="mt-8 text-center">
+                <a href="/" class="search-button">
+                    CERCAR UNA ALTRA CANÇÓ
+                </a>
+            </div>
+        </div>
+        
+        <footer class="mt-8 text-center text-xs text-purple-200 pb-6">
+            <p>&copy; 2025 Em Sona - Dissenyat per a amants de la música catalana</p>
+        </footer>
+    </div>
+
+    <!-- Modal de valoració -->
+    <div id="rating-modal" class="modal">
+        <div class="modal-content">
+            <div class="rating-options">
+                <div class="rating-option">
+                    <p class="rating-question">T'ha agradat la cançó?</p>
+                    <div class="rating-buttons">
+                        <button class="rating-btn heart-btn" data-value="1" onclick="selectRating('song', 1)">❤️</button>
+                        <button class="rating-btn heart-btn" data-value="0" onclick="selectRating('song', 0)">💔</button>
+                    </div>
+                </div>
+                
+                <div class="rating-option">
+                    <p class="rating-question">T'ha agradat la recomanació?</p>
+                    <div class="rating-buttons">
+                        <button class="rating-btn thumb-btn" data-value="1" onclick="selectRating('recommendation', 1)">👍</button>
+                        <button class="rating-btn thumb-btn" data-value="0" onclick="selectRating('recommendation', 0)">👎</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="submit-rating" onclick="submitRating()">Enviar valoració</button>
+        </div>
+    </div>
+    
+    <script>
+        // Variables per a la valoració
+        let currentSongIndex = -1;
+        let ratedSongs = {};
+        let currentRating = {
+            song: null,
+            recommendation: null
+        };
+        
+        // Funció per obrir el modal de valoració
+        function openRatingModal(index) {
+            if (ratedSongs[index]) {
+                return; // No permetre valorar de nou
+            }
+            
+            currentSongIndex = index;
+            document.getElementById('rating-modal').style.display = 'block';
+            
+            // Netejar selecció prèvia
+            resetRatingSelection();
+        }
+        
+        // Funció per seleccionar una valoració
+        function selectRating(type, value) {
+            // Guardar la valoració
+            currentRating[type] = value;
+            
+            // Actualitzar visualment els botons
+            const buttons = document.querySelectorAll(type === 'song' ? '.heart-btn' : '.thumb-btn');
+            buttons.forEach(btn => {
+                if (parseInt(btn.dataset.value) === value) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            // Actualitzar el botó d'enviar si ambdues opcions estan seleccionades
+            updateSubmitButton();
+        }
+        
+        // Funció per actualitzar l'estat del botó d'enviar
+        function updateSubmitButton() {
+            const submitButton = document.querySelector('.submit-rating');
+            
+            if (currentRating.song !== null && currentRating.recommendation !== null) {
+                submitButton.classList.add('active');
+            } else {
+                submitButton.classList.remove('active');
+            }
+        }
+        
+        // Funció per netejar la selecció
+        function resetRatingSelection() {
+            currentRating.song = null;
+            currentRating.recommendation = null;
+            
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateSubmitButton();
+        }
+        
+        // Funció per enviar la valoració
+        function submitRating() {
+            // Verificar que s'han seleccionat ambdues valoracions
+            if (currentRating.song === null || currentRating.recommendation === null) {
+                alert('Si us plau, valora tant la cançó com la recomanació');
+                return;
+            }
+            
+            // Obtenir l'ID del vídeo buscat per l'usuari des de la variable passada per Flask
+            const linkUsuario = "{{ video_id_usuario }}";
+            
+            // Obtenir l'ID del vídeo recomanat
+            const cancion = document.querySelectorAll('.song-card')[currentSongIndex];
+            const iframe = document.querySelector(`#video-${currentSongIndex} iframe`);
+            const linkRecomendacion = obtenerVideoIdDeIframe(iframe);
+            
+            // Cridar a la funció amb els nous paràmetres
+            registrarValoracion(linkUsuario, linkRecomendacion, currentRating.song, currentRating.recommendation);
+            
+            // Marcar la cançó com a valorada
+            ratedSongs[currentSongIndex] = {
+                song: currentRating.song,
+                recommendation: currentRating.recommendation
+            };
+            
+            // Actualitzar el botó de valoració
+            const ratingButton = document.getElementById(`rating-button-${currentSongIndex}`);
+            
+            // Mostrar icones segons la valoració
+            let songIcon = currentRating.song === 1 ? "❤️" : "💔";
+            let recoIcon = currentRating.recommendation === 1 ? "👍" : "👎";
+            ratingButton.innerHTML = `${songIcon} ${recoIcon}`;
+            ratingButton.classList.add('rated');
+            
+            // Tancar modal
+            document.getElementById('rating-modal').style.display = 'none';
+            
+            console.log(`Valoració enviada: Cançó: ${currentRating.song}, Recomanació: ${currentRating.recommendation}`);
+            console.log(`Vídeo usuari: ${linkUsuario}, Vídeo recomanat: ${linkRecomendacion}`);
+        }
+        
+        // Funció per extreure l'ID de vídeo de YouTube d'una URL
+        function obtenerVideoIdDeURL(url) {
+            if (!url) return null;
+            
+            // Intentar extreure l'ID del vídeo de diferents formats d'URL de YouTube
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+        
+        // Funció per extreure l'ID de vídeo de YouTube d'un iframe
+        function obtenerVideoIdDeIframe(iframe) {
+            if (!iframe || !iframe.src) return "video_recomendacion_id";
+            
+            const src = iframe.src;
+            return obtenerVideoIdDeURL(src) || "video_recomendacion_id";
+        }
+        
+        // Funció per registrar la valoració amb el nou format
+        function registrarValoracion(linkUsuario, linkRecomendacion, valorCancion, valorRecomendacion) {
+            // Aquesta funció seria implementada en un altre arxiu
+            // Per ara només registrem a la consola
+            console.log(`Crida a funció externa: registrarValoracion(${linkUsuario}, ${linkRecomendacion}, ${valorCancion}, ${valorRecomendacion})`);
+            
+            // Aquí es faria una crida AJAX o fetch a un endpoint del servidor
+            // Exemple:
+            /*
+            fetch('/api/valoraciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    videoUsuario: linkUsuario,
+                    videoRecomendacion: linkRecomendacion,
+                    valorCancion: valorCancion,
+                    valorRecomendacion: valorRecomendacion
+                })
+            })
+            .then(response => response.json())
+            .then(data => console.log('Valoració registrada:', data))
+            .catch(error => console.error('Error al registrar valoració:', error));
+            */
+        }
+        
+        // Tancar el modal en fer clic fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('rating-modal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Dades per a la visualització t-SNE
+        document.addEventListener('DOMContentLoaded', function() {
+            // ✅ Usar coordenadas reales del backend
+            const coordinatesData = window.coordinatesData;
+            const cancionesData = window.cancionesData;
+            
+            if (coordinatesData && coordinatesData.length > 0) {
+                // Normalizar coordenadas para el contenedor (0-100%)
+                const xCoords = coordinatesData.map(c => c.x);
+                const yCoords = coordinatesData.map(c => c.y);
+                const minX = Math.min(...xCoords);
+                const maxX = Math.max(...xCoords);
+                const minY = Math.min(...yCoords);
+                const maxY = Math.max(...yCoords);
+                
+                // Función para normalizar coordenadas con márgenes
+                function normalizeCoord(value, min, max) {
+                    if (max === min) return 50; // Si todos los puntos están en la misma posición
+                    const normalized = ((value - min) / (max - min)) * 80 + 10; // 10-90% con margen
+                    return Math.max(10, Math.min(90, normalized));
+                }
+                
+                // Crear datos normalizados para las canciones recomendadas
+                const canciones = cancionesData.map(cancion => ({
+                    titulo: cancion.titulo,
+                    artista: cancion.artista,
+                    similitud: cancion.similitud,
+                    link: cancion.link,
+                    x: 50, // Se asignará desde coordinatesData
+                    y: 50  // Se asignará desde coordinatesData
+                }));
+                
+                // Asignar coordenadas reales a las canciones recomendadas
+                canciones.forEach((cancion, index) => {
+                    // Buscar la canción correspondiente en coordinatesData (excluyendo query)
+                    const nonQueryCoords = coordinatesData.filter(c => !c.is_query);
+                    if (index < nonQueryCoords.length) {
+                        cancion.x = normalizeCoord(nonQueryCoords[index].x, minX, maxX);
+                        cancion.y = normalizeCoord(nonQueryCoords[index].y, minY, maxY);
+                    }
+                });
+                
+                // Buscar coordenadas de la canción query
+                const queryCoord = coordinatesData.find(c => c.is_query);
+                const cancionConsulta = {
+                    titulo: "La teva cançó",
+                    artista: "Cançó de referència",
+                    similitud: "100%",
+                    x: queryCoord ? normalizeCoord(queryCoord.x, minX, maxX) : 50,
+                    y: queryCoord ? normalizeCoord(queryCoord.y, minY, maxY) : 50
+                };
+                
+                const container = document.getElementById('tsne-container');
+                
+                // Crear punt per a la cançó de consulta
+                createPoint(cancionConsulta, container, true);
+                
+                // Crear punts per a les cançons similars
+                canciones.forEach((cancion, index) => {
+                    const point = createPoint(cancion, container, false);
+                    point.dataset.index = index;
+                    
+                    // Crear connexió entre la cançó de consulta i cada cançó similar
+                    createConnection(cancionConsulta, cancion, container);
+                });
+                
+            } else {
+                // ✅ Fallback: usar coordenadas aleatorias si no hay datos
+                console.warn('No se encontraron coordenadas, usando posiciones aleatorias');
+                
+                const canciones = cancionesData.map(cancion => ({
+                    titulo: cancion.titulo,
+                    artista: cancion.artista,
+                    similitud: cancion.similitud,
+                    link: cancion.link,
+                    x: Math.random() * 80 + 10,
+                    y: Math.random() * 80 + 10
+                }));
+                
+                const cancionConsulta = {
+                    titulo: "La teva cançó",
+                    artista: "Cançó de referència",
+                    similitud: "100%",
+                    x: 50,
+                    y: 50
+                };
+                
+                const container = document.getElementById('tsne-container');
+                createPoint(cancionConsulta, container, true);
+                
+                canciones.forEach((cancion, index) => {
+                    const point = createPoint(cancion, container, false);
+                    point.dataset.index = index;
+                    createConnection(cancionConsulta, cancion, container);
+                });
+            }
+            
+            // Ressaltar cançó en fer hover a la llista
+            document.querySelectorAll('.song-card').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    const index = this.dataset.index;
+                    const point = document.querySelector(`.tsne-point[data-index="${index}"]`);
+                    if (point) point.classList.add('selected');
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    const index = this.dataset.index;
+                    const point = document.querySelector(`.tsne-point[data-index="${index}"]`);
+                    if (point) point.classList.remove('selected');
+                });
+                
+                // Afegir esdeveniment de clic per mostrar/ocultar vídeo
+                card.addEventListener('click', function(e) {
+                    // No activar si es va fer clic al botó de tancar
+                    if (e.target.closest('.close-button')) return;
+                    
+                    const index = this.dataset.index;
+                    toggleVideo(index);
+                });
+            });
+        });
+        
+        function createPoint(cancion, container, isReference) {
+            // Crear el punt
+            const point = document.createElement('div');
+            point.className = 'tsne-point';
+            if (isReference) {
+                point.classList.add('selected');
+                point.style.backgroundColor = '#ffffff';
+                point.style.width = '18px';
+                point.style.height = '18px';
+                point.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.8)';
+                point.style.zIndex = '20';
+            } else {
+                // Paleta azulada invertida: azul claro = baja, azul intenso = alta
+                const similitud = parseInt(cancion.similitud.replace('%', ''));
+                const intensity = similitud / 100;
+                
+                // AZULES: Baja similitud = azul claro, Alta similitud = azul intenso/índigo
+                let red, green, blue;
+                
+                // Interpolación directa de azul claro a azul intenso
+                red = Math.floor(150 - intensity * 80);      // 150 → 70 (reducir rojo)
+                green = Math.floor(200 - intensity * 100);   // 200 → 100 (reducir verde)  
+                blue = Math.floor(255);                      // 255 constante (máximo azul)
+                
+                point.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+                point.style.boxShadow = `0 0 15px rgba(${red}, ${green}, ${blue}, ${0.3 + intensity * 0.5})`;
+                
+                // Hacer el punto más grande para mayor similitud
+                const size = 14 + (intensity * 6); // De 14px a 20px
+                point.style.width = `${size}px`;
+                point.style.height = `${size}px`;
+                
+                // Hacer clickeable para ir al video de YouTube
+                if (cancion.link) {
+                    point.style.cursor = 'pointer';
+                    point.addEventListener('click', function() {
+                        window.open(cancion.link, '_blank');
+                    });
+                    point.title = `Clic para veure: ${cancion.titulo} - ${cancion.artista}`;
+                }
+            }
+            
+            point.style.left = `${cancion.x}%`;
+            point.style.top = `${cancion.y}%`;
+            container.appendChild(point);
+            
+            // Crear l'etiqueta
+            const label = document.createElement('div');
+            label.className = 'tsne-label';
+            label.textContent = `${cancion.titulo} - ${cancion.artista}`;
+            label.style.left = `${cancion.x}%`;
+            label.style.top = `${cancion.y}%`;
+            container.appendChild(label);
+            
+            return point;
+        }
+        
+        function createConnection(source, target, container) {
+            const dx = target.x - source.x;
+            const dy = target.y - source.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            // Crear línea SVG para mejor precisión
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            svg.style.zIndex = '5';
+            
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", `${source.x}%`);
+            line.setAttribute("y1", `${source.y}%`);
+            line.setAttribute("x2", `${target.x}%`);
+            line.setAttribute("y2", `${target.y}%`);
+            line.setAttribute("stroke-width", "2");
+            
+            // Usar la misma paleta azulada: azul claro a azul intenso
+            const similitud = parseInt(target.similitud.replace('%', ''));
+            const intensity = similitud / 100;
+            
+            let red, green, blue;
+            // Misma lógica que los puntos
+            red = Math.floor(150 - intensity * 80);
+            green = Math.floor(200 - intensity * 100);
+            blue = Math.floor(255);
+            
+            const opacity = 0.3 + (intensity * 0.5); // De 0.3 a 0.8 de opacidad
+            line.setAttribute("stroke", `rgba(${red}, ${green}, ${blue}, ${opacity})`);
+            
+            svg.appendChild(line);
+            container.appendChild(svg);
+        }
+        
+        // Funcions per gestionar els vídeos
+        function toggleVideo(index) {
+            const videoContainer = document.getElementById(`video-${index}`);
+            const allVideos = document.querySelectorAll('.video-container');
+            
+            // Tancar tots els vídeos oberts excepte l'actual
+            allVideos.forEach(container => {
+                if (container.id !== `video-${index}` && container.classList.contains('active')) {
+                    container.classList.remove('active');
+                }
+            });
+            
+            // Alternar l'estat del vídeo actual
+            videoContainer.classList.toggle('active');
+        }
+        
+        function closeVideo(index) {
+            const videoContainer = document.getElementById(`video-${index}`);
+            videoContainer.classList.remove('active');
+        }
+    </script>
+</body>
+</html> 

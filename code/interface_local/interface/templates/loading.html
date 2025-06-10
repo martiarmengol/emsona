@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregant - Em Sona</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header class="p-6">
+        <div class="flex justify-between items-center max-w-7xl mx-auto">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <nav>
+                <a href="/" class="nav-link {% if pagina_activa == 'inicio' %}active{% endif %}">Inici</a>
+                <a href="/liked" class="nav-link {% if pagina_activa == 'liked' %}active{% endif %}">Més Valorades</a>
+                <a href="/library" class="nav-link {% if pagina_activa == 'biblioteca' %}active{% endif %}">Biblioteca</a>
+                <a href="/about" class="nav-link {% if pagina_activa == 'nosotros' %}active{% endif %}">Sobre nosaltres</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="loading-container">
+        <div class="text-center">
+            <h1 class="text-5xl font-bold text-white mb-4 tracking-tight">Em <span class="text-purple-200">Sona</span></h1>
+            <p class="text-xl text-white opacity-80 mb-6">Analitzant la teva música</p>
+            
+            <div class="loading-status">
+                <!-- Disc de vinil dins del contenidor -->
+                <div class="vinyl-record"></div>
+                
+                <div class="equalizer">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+                
+                <div class="w-full space-y-3">
+                    <p class="text-white text-lg font-medium">Analitzant patrons musicals</p>
+                    <div class="progress-bar">
+                        <div class="progress"></div>
+                    </div>
+                    <div class="flex justify-between text-sm text-white opacity-80">
+                        <div>
+                            <span class="status-text">●</span>
+                            <span id="status-message">Processant àudio...</span>
+                        </div>
+                        <span id="percentage" class="font-medium">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <p class="text-white opacity-60 text-sm mt-6">Aquest procés pot trigar uns segons</p>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="footer-left">
+            &copy; 2025 Em Sona - Tots els drets reservats
+        </div>
+
+    </footer>
+    
+    <script>
+        // Variables del proceso
+        const processId = "{{ process_id }}";
+        const videoId = "{{ video_id }}";
+        
+        // Elementos del DOM
+        const percentage = document.getElementById('percentage');
+        const statusMessage = document.getElementById('status-message');
+        const progressBar = document.querySelector('.progress');
+        
+        // Mensajes de estado
+        const messages = [
+            "Processant àudio...",
+            "Extraient característiques...",
+            "Analitzant estructura musical...",
+            "Cercant cançons similars...",
+            "Generant recomanacions...",
+            "Finalitzant..."
+        ];
+        
+        // Variables de control
+        let fakeProgress = 0;
+        let realProcessCompleted = false;
+        let checkingRealProcess = false;
+        
+        // Función para actualizar la barra de progreso visual
+        function updateProgressBar(value) {
+            progressBar.style.width = `${value}%`;
+            percentage.textContent = `${value}%`;
+        }
+        
+        // Función para verificar el estado real del procesamiento
+        function checkRealProcessStatus() {
+            if (checkingRealProcess) return;
+            
+            checkingRealProcess = true;
+            fetch(`/api/check_status/${processId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Estado del proceso:', data);
+                    
+                    if (data.status === 'completed' || data.status === 'error') {
+                        realProcessCompleted = true;
+                        
+                        // Si ya estamos en 99%, completar y redirigir
+                        if (fakeProgress >= 99) {
+                            completeAndRedirect();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al verificar el estado:', error);
+                })
+                .finally(() => {
+                    checkingRealProcess = false;
+                });
+        }
+        
+        // Función para completar al 100% y redirigir
+        function completeAndRedirect() {
+            updateProgressBar(100);
+            statusMessage.textContent = "Completat! Redirigint...";
+            setTimeout(() => {
+                window.location.href = `/results?process_id=${processId}&video_id=${videoId}`;
+            }, 1000);
+        }
+        
+        // Progreso ficticio que dura 30 segundos hasta 99%
+        const fakeInterval = setInterval(() => {
+            fakeProgress += 1;
+            
+            // Limitar el progreso ficticio a 99%
+            const displayProgress = Math.min(fakeProgress, 99);
+            updateProgressBar(displayProgress);
+            
+            // Cambiar mensajes según el progreso
+            if (fakeProgress === 15) {
+                statusMessage.textContent = messages[1];
+            } else if (fakeProgress === 30) {
+                statusMessage.textContent = messages[2];
+            } else if (fakeProgress === 50) {
+                statusMessage.textContent = messages[3];
+            } else if (fakeProgress === 75) {
+                statusMessage.textContent = messages[4];
+            } else if (fakeProgress === 95) {
+                statusMessage.textContent = messages[5];
+            }
+            
+            // Si llegamos al 99% del progreso ficticio
+            if (fakeProgress >= 99) {
+                clearInterval(fakeInterval);
+                
+                // Si el proceso real ya terminó, completar inmediatamente
+                if (realProcessCompleted) {
+                    completeAndRedirect();
+                } else {
+                    // Si no, esperar en 99% hasta que termine el proceso real
+                    statusMessage.textContent = "Finalitzant processament...";
+                    updateProgressBar(99);
+                }
+            }
+        }, 303); // Aproximadamente 30 segundos para llegar a 99 (30000ms / 99 ≈ 303ms)
+        
+        // Verificar el estado del proceso real cada 2 segundos después de 10 segundos
+        setTimeout(() => {
+            const statusCheckInterval = setInterval(() => {
+                checkRealProcessStatus();
+                
+                // Si el proceso real ya terminó y estamos en 99%, completar
+                if (realProcessCompleted && fakeProgress >= 99) {
+                    clearInterval(statusCheckInterval);
+                    completeAndRedirect();
+                } else if (realProcessCompleted) {
+                    // Si el proceso terminó pero aún no llegamos a 99%, seguir esperando
+                    clearInterval(statusCheckInterval);
+                }
+            }, 2000);
+        }, 10000); // Empezar a verificar después de 10 segundos
+        
+    </script>
+</body>
+</html> 
